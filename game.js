@@ -242,14 +242,14 @@ var game = {
                         y: empty[random].y
                     }
                 }));
-                empty = empty.slice(1,random);
+                empty = empty.slice(random);
             }
         };
     },
 
     isThereATribe: function(params){
         for (var i = 0; i < this.tribes.length; i++) {
-            if(this.tribes[i].pos.x === params.x && this.tribes[i].pos.y === params.y){
+            if(this.tribes[i] && this.tribes[i].pos.x === params.x && this.tribes[i].pos.y === params.y){
                 return true;
             }
         };
@@ -302,12 +302,16 @@ var game = {
         game.grownTrees(    0.005);
         game.initNewLife(2, 0.001);
         for (var i = 0; i < game.tribes.length; i++) {
-            game.tribes[i].AIMove();
+            if(game.tribes[i].energy > 0){
+                game.tribes[i].AIMove();
+            }else{
+                game.tribes[i] = false;
+                game.tribes.slice(i);
+            }
         };
     },
 
     drawFPS: function(){
-        //this.ctx.globalCompositeOperation = "source-over";
         this.ctx.fillStyle = '#000';
         this.ctx.font = 'bold 0.5em sans-serif';
         this.ctx.textBaseline = 'bottom';
@@ -345,7 +349,9 @@ var game = {
         }
 
         for (var i = 0; i < this.tribes.length; i++) {
-            this.ctx.putImageData(this.tribeSprite, this.tribes[i].pos.x*this.spriteSize,this.tribes[i].pos.y*game.spriteSize);
+            if(this.tribes[i]){
+                this.ctx.putImageData(this.tribeSprite, this.tribes[i].pos.x*this.spriteSize,this.tribes[i].pos.y*game.spriteSize);
+            }
         };
 
         this.drawFPS();

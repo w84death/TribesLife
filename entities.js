@@ -44,6 +44,9 @@ Tribe.prototype.AIMove = function(params){
         }
 
         if(empty.length>0){
+            if(friends >= 4){
+                this.energy = ((this.energy*0.5)<<0)-1;
+            }else
             if(friends > 0 && empty.length>2 && (Math.random() < this.makeNewLife)){
                 var random = (Math.random()*empty.length)<<0;
                 game.tribes.push(new Tribe({
