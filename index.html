@@ -8,12 +8,14 @@
         <meta name="viewport" content="width=device-width,user-scalable=no">
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <link rel="stylesheet" href="main.css">
-        <link rel="icon" type="image/png" href="/favicon.png" />
+        <style>
+        * {margin: 0; padding: 0;}
+        body {background-color:#000;cursor:none; font-size:1em;}
+        #canvas {display: block; position:absolute;margin:auto; top:0; left:0; right:0; bottom:0;-ms-transform: scale(6); -webkit-transform: scale(6);transform: scale(6);image-rendering: -moz-crisp-edges;image-rendering: -moz-crisp-edges;image-rendering: -o-crisp-edges;image-rendering: -webkit-optimize-contrast; -ms-interpolation-mode: nearest-neighbor;
+        }</style>
     </head>
     <body>
     <canvas id="canvas"></canvas>
-    <script src="entities.js"></script>
     <script src="game.js"></script>
     </body>
 </html>
