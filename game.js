@@ -33,13 +33,38 @@ var Tribe = function(params){
     this.makeNewLife = params.makeNewLife;
     this.follow = params.follow;
     this.speed = params.speed;
+    this.renderSpeed = 0.01;
     this.pos = {
         x: params.pos.x,
         y: params.pos.y
+    };
+    this.renderPos = {
+        x: params.pos.x * game.spriteSize,
+        y: params.pos.y * game.spriteSize
     }
 };
 
-Tribe.prototype.AIMove = function(params){
+Tribe.prototype.renderMove = function(dTime){
+    var screenX = this.pos.x*game.spriteSize,
+        screenY = this.pos.y*game.spriteSize;
+
+    if(screenX !== this.renderPos.x || screenY !== this.renderPos.y){
+        if(screenX < this.renderPos.x){
+            this.renderPos.x -= dTime * this.renderSpeed;
+        }
+        if(screenX > this.renderPos.x){
+            this.renderPos.x += dTime * this.renderSpeed;
+        }
+        if(screenY < this.renderPos.y){
+            this.renderPos.y -= dTime * this.renderSpeed;
+        }
+        if(screenY > this.renderPos.y){
+            this.renderPos.y += dTime * this.renderSpeed;
+        }
+    }
+}
+
+Tribe.prototype.AIMove = function(){
 
     var empty = [],
         bestRoute = 0,
@@ -118,7 +143,8 @@ Tribe.prototype.AIMove = function(params){
 
 
 var game = {
-    render: false,
+    STATE: 'intro',
+    timer: 0,
     _W: null,
     _H: null,
     canvas: null,
@@ -126,9 +152,10 @@ var game = {
     worldW: null,
     worldH: null,
     world: [],
+    randomSpritesMask: [],
     screenScale: 6,
     spriteSize: 6,
-    spritesVariants: 12,
+    spritesVariants: 8,
     sprites: [],
     tribesOnStart: 4,
     tribeSprite: null,
@@ -156,6 +183,10 @@ var game = {
             this.world[x] = [this.worldH];
         }
 
+        for (var i = 0; i < this.worldW * this.worldH; i++) {
+            this.randomSpritesMask.push((Math.random()*this.spritesVariants)<<0 );
+        };
+
         this.generateSprites();
         this.generateWorld();
 
@@ -172,17 +203,34 @@ var game = {
 
 
         function enable_pointer(e){
-            game.mouseDraw = true;
-            game.putFlag(e.pageX, e.pageY);
+            var x,y;
+            if(e.touches){
+                x = e.touches[0].pageX;
+                y = e.touches[0].pageY;
+            }else{
+                x = e.pageX;
+                y = e.pageY;
+            }
+            game.pointerDraw = true;
+            game.putFlag(x, y);
         }
         function disable_pointer(){
-            game.mouseDraw = false;
+            game.pointerDraw = false;
         }
         function track_pointer(e){
-            game.pointer.x = e.pageX;
-            game.pointer.y = e.pageY;
-            if(game.mouseDraw){
-                game.makeNewLand(e.pageX, e.pageY, 1);
+            e.preventDefault();
+            var x,y;
+            if(e.touches){
+                x = e.touches[0].pageX;
+                y = e.touches[0].pageY;
+            }else{
+                x = e.pageX;
+                y = e.pageY;
+            }
+            game.pointer.x = x;
+            game.pointer.y = y;
+            if(game.pointerDraw){
+                game.makeNewLand(x,y, 1);
             }
         }
     },
@@ -448,35 +496,39 @@ var game = {
     },
 
     simulateLife: function(){
-        game.grownTrees(    0.005);
-        game.initNewLife(2, 0.001);
-        var terrain;
-        for (var i = 0; i < game.tribes.length; i++) {
-            if(game.tribes[i]){
-                terrain = game.world[game.tribes[i].pos.x][game.tribes[i].pos.y];
-                if( terrain === 1){
-                   game.tribes[i].energy--;
-                }
-                if( terrain === 2){
-                   game.tribes[i].energy += 20;
-                   game.world[game.tribes[i].pos.x][game.tribes[i].pos.y] = 1;
-                }
-                if(game.tribes[i].energy > 0){
-                    game.tribes[i].AIMove();
-                }else{
-                    game.tribes[i] = false;
-                    game.tribes.slice(i);
+        game.timer++;
+
+        if(game.STATE == 'game'){
+            game.grownTrees(0.005);
+            game.initNewLife(2, 0.001);
+            var terrain;
+            for (var i = 0; i < game.tribes.length; i++) {
+                if(game.tribes[i]){
+                    terrain = game.world[game.tribes[i].pos.x][game.tribes[i].pos.y];
+                    if( terrain === 1){
+                       game.tribes[i].energy--;
+                    }
+                    if( terrain === 2 && game.tribes[i].energy < 50){
+                       game.tribes[i].energy += 20;
+                       game.world[game.tribes[i].pos.x][game.tribes[i].pos.y] = 1;
+                    }
+                    if(game.tribes[i].energy > 0){
+                        game.tribes[i].AIMove();
+                    }else{
+                        game.tribes[i] = false;
+                        game.tribes.slice(i);
+                    }
                 }
             }
-        };
+        }
     },
 
     drawFPS: function(){
         this.ctx.fillStyle = '#000';
         this.ctx.font = 'bold 0.5em sans-serif';
         this.ctx.textBaseline = 'bottom';
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText('FPS: '+this.fps, this._W*0.9 << 0, this._H*0.9 << 0);
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(this.fps, 6, 12);
     },
 
     drawCursor: function(){
@@ -498,27 +550,67 @@ var game = {
 
     draw: function(dTime){
         var sprite = 0;
+        this.dTime = dTime;
 
         this.ctx.clearRect(0, 0, this._W, this._H);
 
-        for (var x = 0; x < this.world.length; x++) {
-            for (var y = 0; y < this.world[x].length; y++) {
-                    sprite = this.sprites[this.spritesVariants * this.world[x][y] + (Math.random()*(this.spritesVariants))<<0];
-                this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize);
+        if( this.STATE == 'intro'){
+            this.ctx.textBaseline = 'bottom';
+            this.ctx.textAlign = 'center';
+
+            this.ctx.fillStyle = '#eb8931';
+            this.ctx.font = 'bold 1em sans-serif';
+            this.ctx.fillText('Tribes Life', this._W*0.5 << 0, this._H*0.5 << 0);
+
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 0.7em sans-serif';
+            this.ctx.fillText('A game of life for js13kgames', this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
+
+            if(this.timer % 2 == 1){
+                this.ctx.fillStyle = '#fff';
+                this.ctx.font = 'bold 0.7em sans-serif';
+                this.ctx.fillText('click to start', this._W*0.5 << 0, (this._H*0.5 << 0) + 36);
             }
+
+            if(this.pointerDraw){
+                this.STATE = 'game';
+                this.pointerDraw = false;
+            }
+
         }
 
-        for (var i = 0; i < this.tribes.length; i++) {
-            if(this.tribes[i]){
-                this.ctx.putImageData(this.tribeSprite, this.tribes[i].pos.x*this.spriteSize,this.tribes[i].pos.y*game.spriteSize);
+        if(this.STATE == 'game'){
+            for (var x = 0; x < this.world.length; x++) {
+                for (var y = 0; y < this.world[x].length; y++) {
+                        if(this.world[x][y]> 0){
+                            sprite = this.sprites[this.spritesVariants * this.world[x][y] + (this.randomSpritesMask[x*y+x+y])];
+                        }else{
+                            sprite = this.sprites[this.spritesVariants * this.world[x][y] + (Math.random()*(this.spritesVariants))<<0];
+                        }
+                    this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize);
+                }
             }
-        };
 
-        if(this.flag){
-            this.ctx.putImageData(this.flagSprite, this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
+            for (var i = 0; i < this.tribes.length; i++) {
+                if(this.tribes[i]){
+                    this.tribes[i].renderMove(dTime);
+                    this.ctx.putImageData(this.tribeSprite, (this.tribes[i].renderPos.x)<<0,(this.tribes[i].renderPos.y)<<0);
+
+                    /*this.ctx.beginPath();
+                    this.ctx.moveTo(this.tribes[i].renderPos.x*game.spriteSize,this.tribes[i].renderPos.y*game.spriteSize);
+                    this.ctx.lineTo(this.tribes[i].pos.x*game.spriteSize,this.tribes[i].pos.y*game.spriteSize - (this.tribes[i].energy/10)<<0);
+                    this.ctx.strokeStyle = '#be2633';
+                    this.ctx.stroke();*/
+                }
+            };
+
+            if(this.flag){
+                this.ctx.putImageData(this.flagSprite, this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
+            }
+            this.drawFPS();
         }
 
-        this.drawFPS();
+
         this.drawCursor();
     }
 };
