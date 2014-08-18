@@ -71,6 +71,7 @@ Tribe.prototype.AIMove = function(){
         friends = 0;
 
     if(Math.random() < this.speed){
+
         for (var x = this.pos.x-1; x <= this.pos.x+1; x++) {
             for (var y = this.pos.y-1; y <= this.pos.y+1; y++) {
                 if(game.world[x] && game.world[x][y] && game.world[x][y] > 0){
@@ -84,53 +85,84 @@ Tribe.prototype.AIMove = function(){
         }
 
         if(empty.length>0){
+
+            // to many tribes!
             if(friends >= 5){
                 this.energy = ((this.energy*0.5)<<0)-1;
-            }else
-            // firend 1 is the same tribe
+            }
+
+            // good vibe for sex :>
             if(friends > 1 && empty.length>2 && this.energy >= 10 && (Math.random() < this.makeNewLife)){
                 var random = (Math.random()*empty.length)<<0;
                 game.spawnNewTribe({
                     x:empty[random].x,
                     y:empty[random].y
                 });
-            }else
-            if(Math.random() < this.follow && game.flag){
+            }
 
-                if(Math.abs(game.flag.x-this.pos.x) > Math.abs(game.flag.y-this.pos.y)){
-                    if(game.flag.x < this.pos.x){
-                        for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].x < empty[bestRoute].x){
-                                bestRoute = i;
-                            }
-                        };
-                    }
-                    if(game.flag.x >= this.pos.x){
-                        for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].x >= empty[bestRoute].x){
-                                bestRoute = i;
-                            }
-                        };
-                    }
-                }else{
-                    if(game.flag.y < this.pos.y){
-                        for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].y < empty[bestRoute].y){
-                                bestRoute = i;
-                            }
-                        };
-                    }
-                    if(game.flag.y >= this.pos.y){
-                        for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].y >= empty[bestRoute].y){
-                                bestRoute = i;
-                            }
-                        };
-                    }
+            // folow the god's way?
+            if(game.flag && Math.random() < this.follow){
+
+
+                if(game.flag.x < this.pos.x){
+                    for (var i = 0; i < empty.length; i++) {
+                        if(empty[i].x < empty[bestRoute].x){
+                            bestRoute = i;
+                        }
+                    };
                 }
+
+                if(game.flag.x > this.pos.x){
+                    for (var i = 0; i < empty.length; i++) {
+                        if(empty[i].x > empty[bestRoute].x){
+                            bestRoute = i;
+                        }
+                    };
+                }
+
+                if(game.flag.x === this.pos.x){
+                   for (var i = 0; i < empty.length; i++) {
+                        if(game.flag.y > this.pos.y && empty[i].y > this.pos.y){
+                            bestRoute = i;
+                        }
+                        if(game.flag.y < this.pos.y && empty[i].y < this.pos.y){
+                            bestRoute = i;
+                        }
+                    };
+                }
+
+                if(game.flag.y < this.pos.y){
+                    for (var i = 0; i < empty.length; i++) {
+                        if(empty[i].y < empty[bestRoute].y){
+                            bestRoute = i;
+                        }
+                    };
+                }
+                if(game.flag.y > this.pos.y){
+                    for (var i = 0; i < empty.length; i++) {
+                        if(empty[i].y > empty[bestRoute].y){
+                            bestRoute = i;
+                        }
+                    };
+                }
+
+                if(game.flag.y === this.pos.y){
+                   for (var i = 0; i < empty.length; i++) {
+                        if(empty[i].y === game.flag.y){
+                            if(game.flag.x > this.pos.x && empty[i].x > this.pos.x){
+                                bestRoute = i;
+                            }
+                            if(game.flag.x < this.pos.x && empty[i].x < this.pos.x){
+                                bestRoute = i;
+                            }
+                        }
+                    };
+                }
+
                 this.pos.x = empty[bestRoute].x;
                 this.pos.y = empty[bestRoute].y;
             }else{
+                // or move free
                 var random = (Math.random()*empty.length)<<0;
                 this.pos.x = empty[random].x;
                 this.pos.y = empty[random].y;
@@ -157,7 +189,7 @@ var game = {
     spriteSize: 6,
     spritesVariants: 8,
     sprites: [],
-    tribesOnStart: 4,
+    tribesOnStart: 3,
     tribeSprite: null,
     flagSprite: null,
     flag: false,
@@ -201,8 +233,12 @@ var game = {
         this.canvas.addEventListener('touchcancel', disable_pointer, false);
         this.canvas.addEventListener('touchmove', track_pointer, false);
 
+        this.canvas.addEventListener("contextmenu", function(e){
+            e.preventDefault();
+        }, false);
 
         function enable_pointer(e){
+            e.preventDefault();
             var x,y;
             if(e.touches){
                 x = e.touches[0].pageX;
@@ -230,7 +266,8 @@ var game = {
             game.pointer.x = x;
             game.pointer.y = y;
             if(game.pointerDraw){
-                game.makeNewLand(x,y, 1);
+
+                game.makeNewLand(x,y, event.which == 1 ? 1 : 0 );
             }
         }
     },
@@ -353,8 +390,8 @@ var game = {
     },
 
     generateWorld: function(){
-        var deep = 3,
-            islands = 0.01,
+        var deep = 4,
+            islands = 0.02,
             ground = 0.2,
             forest = 0.05;
 
@@ -388,7 +425,7 @@ var game = {
         };
 
         this.initNewLife(2, forest);
-        this.grownTrees(ground);
+        this.grownTrees(ground*2);
 
         this.initTribes();
     },
@@ -412,7 +449,7 @@ var game = {
                     x: empty[random].x,
                     y: empty[random].y
                 });
-                empty = empty.slice(random);
+                empty = empty.splice(random,1);
             }
         };
     },
@@ -471,7 +508,7 @@ var game = {
         var x = (x / game.screenScale / game.spriteSize) << 0,
             y = (y / game.screenScale / game.spriteSize) << 0;
 
-        if(game.world[x] && game.world[x][y] > -1) {
+        if(game.world[x] && game.world[x][y] === (type == 1 ? 0 : 1)) {
             if(game.lastMouse.x !== x || game.lastMouse.y !== y){
                 game.world[x][y] = type;
                 game.lastMouse.x = x;
@@ -516,7 +553,7 @@ var game = {
                         game.tribes[i].AIMove();
                     }else{
                         game.tribes[i] = false;
-                        game.tribes.slice(i);
+                        game.tribes.splice(i,1);
                     }
                 }
             }
@@ -528,7 +565,7 @@ var game = {
         this.ctx.font = 'bold 0.5em sans-serif';
         this.ctx.textBaseline = 'bottom';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(this.fps, 6, 12);
+        this.ctx.fillText('FPS:'+this.fps, 6, 12);
     },
 
     drawCursor: function(){
@@ -548,8 +585,22 @@ var game = {
         this.ctx.stroke();
     },
 
+    drawGUI: function(){
+
+        this.ctx.textBaseline = 'bottom';
+        this.ctx.textAlign = 'center';
+
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = 'bold 0.5em sans-serif';
+        this.ctx.fillText('Tribes: '+this.tribes.length, this._W*0.5 << 0, 12);
+
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText('Time: '+this.timer, this._W - 12, 12);
+    },
+
     draw: function(dTime){
-        var sprite = 0;
+        var sprite = 0,
+         i, x, y;
         this.dTime = dTime;
 
         this.ctx.clearRect(0, 0, this._W, this._H);
@@ -580,18 +631,26 @@ var game = {
         }
 
         if(this.STATE == 'game'){
-            for (var x = 0; x < this.world.length; x++) {
-                for (var y = 0; y < this.world[x].length; y++) {
+            for (x = 0; x < this.world.length; x++) {
+                for (y = 0; y < this.world[x].length; y++) {
                         if(this.world[x][y]> 0){
                             sprite = this.sprites[this.spritesVariants * this.world[x][y] + (this.randomSpritesMask[x*y+x+y])];
+
+                            var step = 0;
+                            if(y<this.worldH-1){
+                                step = this.world[x][y+1] === 0 ? -1 : 0;
+                            }
+                            this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize+step);
                         }else{
                             sprite = this.sprites[this.spritesVariants * this.world[x][y] + (Math.random()*(this.spritesVariants))<<0];
+                            this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize);
                         }
-                    this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize);
+
+
                 }
             }
 
-            for (var i = 0; i < this.tribes.length; i++) {
+            for (i = 0; i < this.tribes.length; i++) {
                 if(this.tribes[i]){
                     this.tribes[i].renderMove(dTime);
                     this.ctx.putImageData(this.tribeSprite, (this.tribes[i].renderPos.x)<<0,(this.tribes[i].renderPos.y)<<0);
@@ -603,6 +662,8 @@ var game = {
                     this.ctx.stroke();*/
                 }
             };
+
+            this.drawGUI();
 
             if(this.flag){
                 this.ctx.putImageData(this.flagSprite, this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
