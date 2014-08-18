@@ -444,8 +444,8 @@ var game = {
         }
 
         for (var i = 0; i < deep; i++) {
-            for (var x = 1; x < this.worldW-1; x++) {
-                for (var y = 1; y < this.worldH-1; y++) {
+            for (var x = 2; x < this.worldW-2; x++) {
+                for (var y = 2; y < this.worldH-2; y++) {
                     if(this.world[x][y] == 1){
                         this.world[x-1][y] = Math.random()<ground ? 1 : this.world[x-1][y];
                         this.world[x+1][y] = Math.random()<ground ? 1 : this.world[x+1][y];
@@ -575,7 +575,7 @@ var game = {
         var x = (x / game.screenScale / game.spriteSize) << 0,
             y = (y / game.screenScale / game.spriteSize) << 0;
 
-        if(game.world[x]) {
+        if(game.world[x] && x > 0 && y > 0 && x < game.worldW-1 && y < game.worldH-1) {
             if( (type === 1 && game.world[x][y] === 0 ) || (type === 0 && game.world[x][y] > 0)){
                 if(game.lastMouse.x !== x || game.lastMouse.y !== y){
                     game.world[x][y] = type;
@@ -614,8 +614,8 @@ var game = {
         }
 
         if(game.STATE == 'game'){
-            game.grownTrees(0.005);
-            game.initNewLife(2, 0.001);
+            game.grownTrees(3, 0.005);
+            game.initNewLife(3, 0.001);
             var terrain;
             for (var i = 0; i < game.tribes.length; i++) {
                 if(game.tribes[i]){
@@ -755,7 +755,7 @@ var game = {
 
                     this.tribes[i].renderMove(dTime);
 
-                    if(this.tribes[i].following){
+                    if(this.flag && this.tribes[i].following){
                         this.ctx.beginPath();
                         this.ctx.moveTo((this.tribes[i].renderPos.x+(this.spriteSize*0.5))<<0,(this.tribes[i].renderPos.y+(this.spriteSize*0.5))<<0);
                         this.ctx.lineTo((this.flag.x*game.spriteSize+(this.spriteSize*0.5))<<0,(this.flag.y*game.spriteSize+(this.spriteSize*0.5))<<0);
