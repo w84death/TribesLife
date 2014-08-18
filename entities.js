@@ -55,20 +55,17 @@ Tribe.prototype.AIMove = function(params){
                     y:empty[random].y
                 });
             }else
-            if(Math.random() < this.follow){
-                var pointer = {
-                    x: (game.pointer.x / game.spriteSize / game.screenScale ) <<0,
-                    y: (game.pointer.y / game.spriteSize / game.screenScale) <<0
-                }
-                if(Math.abs(pointer.x-this.pos.x) > Math.abs(pointer.y-this.pos.y)){
-                    if(pointer.x < this.pos.x){
+            if(Math.random() < this.follow && game.flag){
+
+                if(Math.abs(game.flag.x-this.pos.x) > Math.abs(game.flag.y-this.pos.y)){
+                    if(game.flag.x < this.pos.x){
                         for (var i = 0; i < empty.length; i++) {
                             if(empty[i].x < empty[bestRoute].x){
                                 bestRoute = i;
                             }
                         };
                     }
-                    if(pointer.x >= this.pos.x){
+                    if(game.flag.x >= this.pos.x){
                         for (var i = 0; i < empty.length; i++) {
                             if(empty[i].x >= empty[bestRoute].x){
                                 bestRoute = i;
@@ -76,14 +73,14 @@ Tribe.prototype.AIMove = function(params){
                         };
                     }
                 }else{
-                    if(pointer.y < this.pos.y){
+                    if(game.flag.y < this.pos.y){
                         for (var i = 0; i < empty.length; i++) {
                             if(empty[i].y < empty[bestRoute].y){
                                 bestRoute = i;
                             }
                         };
                     }
-                    if(pointer.y >= this.pos.y){
+                    if(game.flag.y >= this.pos.y){
                         for (var i = 0; i < empty.length; i++) {
                             if(empty[i].y >= empty[bestRoute].y){
                                 bestRoute = i;

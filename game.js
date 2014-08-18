@@ -43,6 +43,7 @@ var game = {
     tribesOnStart: 4,
     tribeSprite: null,
     flagSprite: null,
+    flag: false,
     fps: 0,
     renderScreen: true,
     lastMouse: {x:0,y:0},
@@ -82,6 +83,7 @@ var game = {
 
         function enable_pointer(e){
             game.mouseDraw = true;
+            game.putFlag(e.pageX, e.pageY);
         }
         function disable_pointer(){
             game.mouseDraw = false;
@@ -123,14 +125,16 @@ var game = {
         // tribe
         this.tribeSprite = this.offTribeSprite({
             colorHead: [0,0,0],
-            colorBody: [73,60,43]
+            colorBody: [73,60,43],
+            colorBG: [235,137,49]
         });
 
         // flag
-        /*this.flagSprite = this.offflagSprite({
-            colorA: [0,0,0],
-            colorB: [73,60,43]
-        });*/
+        this.flagSprite = this.offFlagSprite({
+            colorA: [190,38,51],
+            colorB: [73,60,43],
+            colorBG: [235,137,49]
+        });
     },
 
     offSprite: function(params){
@@ -170,9 +174,39 @@ var game = {
                 pixels[i++] = params.colorBody[2];
                 pixels[i++] = 255;
             }else{
+                pixels[i++] = params.colorBG[0];
+                pixels[i++] = params.colorBG[1];
+                pixels[i++] = params.colorBG[2];
                 pixels[i++] = 255;
+            }
+        }
+
+        return imageData;
+    },
+
+
+    offFlagSprite: function(params){
+        var imageData = this.ctx.getImageData(0, 0, this.spriteSize, this.spriteSize),
+            pixels = imageData.data,
+            n = pixels.length,
+            i = 0;
+
+        while (i <= n) {
+            if( (i > 7*4 && i < 12*4) || (i > 13*4 && i < 17*4) || (i > 19*4 && i < 24*4) ){
+                pixels[i++] = params.colorA[0];
+                pixels[i++] = params.colorA[1];
+                pixels[i++] = params.colorA[2];
                 pixels[i++] = 255;
+            }else
+            if(i==7*4 || i==13*4 || i==19*4 || i==25*4 || i ==31*4){
+                pixels[i++] = params.colorB[0];
+                pixels[i++] = params.colorB[1];
+                pixels[i++] = params.colorB[2];
                 pixels[i++] = 255;
+            }else{
+                pixels[i++] = params.colorBG[0];
+                pixels[i++] = params.colorBG[1];
+                pixels[i++] = params.colorBG[2];
                 pixels[i++] = 255;
             }
         }
@@ -196,8 +230,6 @@ var game = {
                 }
             }
         }
-
-
 
         for (var i = 0; i < deep; i++) {
             for (var x = 1; x < this.worldW-1; x++) {
@@ -308,7 +340,21 @@ var game = {
                 game.lastMouse.y = y;
             }
         }
+    },
 
+    putFlag: function(x,y){
+        var x = (x / game.screenScale / game.spriteSize) << 0,
+            y = (y / game.screenScale / game.spriteSize) << 0;
+
+        if(game.flag && game.flag.x === x && game.flag.y === y){
+            game.flag = false;
+        }else
+        if(game.world[x] && game.world[x][y] > 0) {
+            game.flag = {
+                x:x,
+                y:y
+            };
+        }
     },
 
     simulateLife: function(){
@@ -377,6 +423,10 @@ var game = {
                 this.ctx.putImageData(this.tribeSprite, this.tribes[i].pos.x*this.spriteSize,this.tribes[i].pos.y*game.spriteSize);
             }
         };
+
+        if(this.flag){
+            this.ctx.putImageData(this.flagSprite, this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
+        }
 
         this.drawFPS();
         this.drawCursor();
