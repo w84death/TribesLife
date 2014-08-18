@@ -41,7 +41,8 @@ var Tribe = function(params){
     this.renderPos = {
         x: params.pos.x * game.spriteSize,
         y: params.pos.y * game.spriteSize
-    }
+    };
+    following = false;
 };
 
 Tribe.prototype.renderMove = function(dTime){
@@ -103,6 +104,7 @@ Tribe.prototype.AIMove = function(){
             // folow the god's way?
             if(game.flag && Math.random() < this.follow){
 
+                this.following = true;
 
                 if(game.flag.x < this.pos.x){
                     for (var i = 0; i < empty.length; i++) {
@@ -163,6 +165,7 @@ Tribe.prototype.AIMove = function(){
                 this.pos.y = empty[bestRoute].y;
             }else{
                 // or move free
+                this.following = false;
                 var random = (Math.random()*empty.length)<<0;
                 this.pos.x = empty[random].x;
                 this.pos.y = empty[random].y;
@@ -177,6 +180,7 @@ Tribe.prototype.AIMove = function(){
 var game = {
     STATE: 'intro',
     timer: 0,
+    gameScore: 0,
     _W: null,
     _H: null,
     canvas: null,
@@ -289,6 +293,15 @@ var game = {
             }));
         };
 
+        // sand
+        for (var i = 0; i < this.spritesVariants; i++) {
+            this.sprites.push(this.offSprite({
+                colorA: [235,137,49],
+                colorB: [247,226,107]
+            }));
+        };
+
+
         // forest
         for (var i = 0; i < this.spritesVariants; i++) {
             this.sprites.push(this.offSprite({
@@ -297,6 +310,7 @@ var game = {
             }));
         };
 
+/*
         // tribe
         this.tribeSprite = this.offTribeSprite({
             colorHead: [0,0,0],
@@ -309,7 +323,7 @@ var game = {
             colorA: [190,38,51],
             colorB: [73,60,43],
             colorBG: [235,137,49]
-        });
+        });*/
     },
 
     offSprite: function(params){
@@ -359,9 +373,35 @@ var game = {
         return imageData;
     },
 
+    offTribeSpriteLive: function(params){
+        var imageData = this.ctx.getImageData(params.x, params.y, this.spriteSize, this.spriteSize),
+            pixels = imageData.data,
+            n = pixels.length,
+            i = 0;
 
-    offFlagSprite: function(params){
-        var imageData = this.ctx.getImageData(0, 0, this.spriteSize, this.spriteSize),
+        while (i <= n) {
+            if(i == 15*4){
+                pixels[i++] = params.colorHead[0];
+                pixels[i++] = params.colorHead[1];
+                pixels[i++] = params.colorHead[2];
+                pixels[i++] = 255;
+            }else
+            if(i==20*4 || i==21*4 || i==22*4 || i==27*4 || i ==32*4 || i==34*4){
+                pixels[i++] = params.colorBody[0];
+                pixels[i++] = params.colorBody[1];
+                pixels[i++] = params.colorBody[2];
+                pixels[i++] = 255;
+            }else{
+                i+=4;
+            }
+        }
+
+        return imageData;
+    },
+
+
+    offFlagSpriteLive: function(params){
+        var imageData = this.ctx.getImageData(params.x, params.y, this.spriteSize, this.spriteSize),
             pixels = imageData.data,
             n = pixels.length,
             i = 0;
@@ -379,10 +419,7 @@ var game = {
                 pixels[i++] = params.colorB[2];
                 pixels[i++] = 255;
             }else{
-                pixels[i++] = params.colorBG[0];
-                pixels[i++] = params.colorBG[1];
-                pixels[i++] = params.colorBG[2];
-                pixels[i++] = 255;
+                i+=4;
             }
         }
 
@@ -424,10 +461,40 @@ var game = {
             }
         };
 
-        this.initNewLife(2, forest);
-        this.grownTrees(ground*2);
+        this.makeDunes();
+        this.initNewLife(3, forest);
+        this.grownTrees(3, ground*2);
 
         this.initTribes();
+    },
+
+    makeDunes: function(){
+        for (var x = 1; x < this.worldW-1; x++) {
+            for (var y = 1; y < this.worldH-1; y++) {
+                if(this.world[x][y] === 1 && (
+                    this.world[x-1][y] === 0 ||
+                    this.world[x+1][y] === 0 ||
+                    this.world[x][y-1] === 0 ||
+                    this.world[x][y+1] === 0 ||
+                    this.world[x-1][y-1] === 0 ||
+                    this.world[x+1][y-1] === 0 ||
+                    this.world[x-1][y+1] === 0 ||
+                    this.world[x+1][y+1] === 0)){
+                        this.world[x][y] = 2;
+                }
+                if(this.world[x][y] === 2 && (
+                    this.world[x-1][y] > 0 &&
+                    this.world[x+1][y] > 0 &&
+                    this.world[x][y-1] > 0 &&
+                    this.world[x][y+1] > 0 &&
+                    this.world[x-1][y-1] > 0 &&
+                    this.world[x+1][y-1] > 0 &&
+                    this.world[x-1][y+1] > 0 &&
+                    this.world[x+1][y+1] > 0)){
+                        this.world[x][y] = 1;
+                }
+            }
+        }
     },
 
     initTribes: function(){
@@ -486,19 +553,19 @@ var game = {
         }
     },
 
-    grownTrees: function(ground){
+    grownTrees: function(sprite, ground){
         for (var x = 1; x < this.worldW-1; x++) {
             for (var y = 1; y < this.worldH-1; y++) {
-                if(this.world[x][y] == 2){
-                    if(this.world[x-1][y] == 1) this.world[x-1][y] = Math.random()<ground ? 2 : this.world[x-1][y];
-                    if(this.world[x+1][y] == 1) this.world[x+1][y] = Math.random()<ground ? 2 : this.world[x+1][y];
-                    if(this.world[x][y-1] == 1) this.world[x][y-1] = Math.random()<ground ? 2 : this.world[x][y-1];
-                    if(this.world[x][y+1] == 1) this.world[x][y+1] = Math.random()<ground ? 2 : this.world[x][y+1];
+                if(this.world[x][y] == sprite){
+                    if(this.world[x-1][y] == 1) this.world[x-1][y] = Math.random()<ground ? sprite : this.world[x-1][y];
+                    if(this.world[x+1][y] == 1) this.world[x+1][y] = Math.random()<ground ? sprite : this.world[x+1][y];
+                    if(this.world[x][y-1] == 1) this.world[x][y-1] = Math.random()<ground ? sprite : this.world[x][y-1];
+                    if(this.world[x][y+1] == 1) this.world[x][y+1] = Math.random()<ground ? sprite : this.world[x][y+1];
 
-                    if(this.world[x-1][y-1] == 1) this.world[x-1][y-1] = Math.random()<ground ? 2 : this.world[x-1][y-1];
-                    if(this.world[x+1][y-1] == 1) this.world[x+1][y-1] = Math.random()<ground ? 2 : this.world[x+1][y-1];
-                    if(this.world[x-1][y+1] == 1) this.world[x-1][y+1] = Math.random()<ground ? 2 : this.world[x-1][y+1];
-                    if(this.world[x+1][y+1] == 1) this.world[x+1][y+1] = Math.random()<ground ? 2 : this.world[x+1][y+1];
+                    if(this.world[x-1][y-1] == 1) this.world[x-1][y-1] = Math.random()<ground ? sprite : this.world[x-1][y-1];
+                    if(this.world[x+1][y-1] == 1) this.world[x+1][y-1] = Math.random()<ground ? sprite : this.world[x+1][y-1];
+                    if(this.world[x-1][y+1] == 1) this.world[x-1][y+1] = Math.random()<ground ? sprite : this.world[x-1][y+1];
+                    if(this.world[x+1][y+1] == 1) this.world[x+1][y+1] = Math.random()<ground ? sprite : this.world[x+1][y+1];
                 }
             }
         }
@@ -508,11 +575,14 @@ var game = {
         var x = (x / game.screenScale / game.spriteSize) << 0,
             y = (y / game.screenScale / game.spriteSize) << 0;
 
-        if(game.world[x] && game.world[x][y] === (type == 1 ? 0 : 1)) {
-            if(game.lastMouse.x !== x || game.lastMouse.y !== y){
-                game.world[x][y] = type;
-                game.lastMouse.x = x;
-                game.lastMouse.y = y;
+        if(game.world[x]) {
+            if( (type === 1 && game.world[x][y] === 0 ) || (type === 0 && game.world[x][y] > 0)){
+                if(game.lastMouse.x !== x || game.lastMouse.y !== y){
+                    game.world[x][y] = type;
+                    game.lastMouse.x = x;
+                    game.lastMouse.y = y;
+                    game.makeDunes();
+                }
             }
         }
     },
@@ -532,8 +602,16 @@ var game = {
         }
     },
 
+    killTribe: function(i){
+        game.tribes[i] = false;
+        game.tribes.splice(i,1);
+    },
+
     simulateLife: function(){
-        game.timer++;
+
+        if(game.STATE !== 'game_over'){
+            game.timer++;
+        }
 
         if(game.STATE == 'game'){
             game.grownTrees(0.005);
@@ -542,21 +620,30 @@ var game = {
             for (var i = 0; i < game.tribes.length; i++) {
                 if(game.tribes[i]){
                     terrain = game.world[game.tribes[i].pos.x][game.tribes[i].pos.y];
-                    if( terrain === 1){
-                       game.tribes[i].energy--;
+                    if( terrain === 0){
+                       game.killTribe(i);
                     }
-                    if( terrain === 2 && game.tribes[i].energy < 50){
+                    if( terrain === 1){
+                       game.tribes[i].energy-=1;
+                    }
+                    if( terrain === 2){
+                       game.tribes[i].energy-=4;
+                    }
+                    if( terrain === 3 && game.tribes[i].energy < 50){
                        game.tribes[i].energy += 20;
                        game.world[game.tribes[i].pos.x][game.tribes[i].pos.y] = 1;
                     }
                     if(game.tribes[i].energy > 0){
                         game.tribes[i].AIMove();
                     }else{
-                        game.tribes[i] = false;
-                        game.tribes.splice(i,1);
+                        game.killTribe(i);
                     }
                 }
             }
+        }
+
+        if(game.tribes.length < 1){
+            game.STATE = 'game_over';
         }
     },
 
@@ -595,7 +682,7 @@ var game = {
         this.ctx.fillText('Tribes: '+this.tribes.length, this._W*0.5 << 0, 12);
 
         this.ctx.textAlign = 'right';
-        this.ctx.fillText('Time: '+this.timer, this._W - 12, 12);
+        this.ctx.fillText('Score: '+this.timer, this._W - 12, 12);
     },
 
     draw: function(dTime){
@@ -630,6 +717,19 @@ var game = {
 
         }
 
+        if( this.STATE == 'game_over'){
+            this.ctx.textBaseline = 'bottom';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillStyle = '#eb8931';
+            this.ctx.font = 'bold 1em sans-serif';
+            this.ctx.fillText('Game Over', this._W*0.5 << 0, this._H*0.5 << 0);
+
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 0.7em sans-serif';
+            this.ctx.fillText('Score: '+this.timer, this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
+
+        }
+
         if(this.STATE == 'game'){
             for (x = 0; x < this.world.length; x++) {
                 for (y = 0; y < this.world[x].length; y++) {
@@ -652,23 +752,45 @@ var game = {
 
             for (i = 0; i < this.tribes.length; i++) {
                 if(this.tribes[i]){
+
                     this.tribes[i].renderMove(dTime);
-                    this.ctx.putImageData(this.tribeSprite, (this.tribes[i].renderPos.x)<<0,(this.tribes[i].renderPos.y)<<0);
+
+                    if(this.tribes[i].following){
+                        this.ctx.beginPath();
+                        this.ctx.moveTo((this.tribes[i].renderPos.x+(this.spriteSize*0.5))<<0,(this.tribes[i].renderPos.y+(this.spriteSize*0.5))<<0);
+                        this.ctx.lineTo((this.flag.x*game.spriteSize+(this.spriteSize*0.5))<<0,(this.flag.y*game.spriteSize+(this.spriteSize*0.5))<<0);
+                        this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                        this.ctx.stroke();
+                    }
+
+                    this.ctx.putImageData(this.offTribeSpriteLive({
+                        x: this.tribes[i].renderPos.x<<0,
+                        y: this.tribes[i].renderPos.y<<0,
+                        colorHead: [0,0,0],
+                        colorBody: [73,60,43]
+                    }), (this.tribes[i].renderPos.x)<<0,(this.tribes[i].renderPos.y)<<0);
 
                     /*this.ctx.beginPath();
                     this.ctx.moveTo(this.tribes[i].renderPos.x*game.spriteSize,this.tribes[i].renderPos.y*game.spriteSize);
                     this.ctx.lineTo(this.tribes[i].pos.x*game.spriteSize,this.tribes[i].pos.y*game.spriteSize - (this.tribes[i].energy/10)<<0);
                     this.ctx.strokeStyle = '#be2633';
                     this.ctx.stroke();*/
+
+
                 }
             };
 
-            this.drawGUI();
-
             if(this.flag){
-                this.ctx.putImageData(this.flagSprite, this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
+                this.ctx.putImageData(this.offFlagSpriteLive({
+                    x: this.flag.x*this.spriteSize,
+                    y: this.flag.y*this.spriteSize,
+                    colorA: [190,38,51],
+                    colorB: [73,60,43]
+                }), this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
             }
+
             this.drawFPS();
+            this.drawGUI();
         }
 
 
