@@ -50,16 +50,10 @@ Tribe.prototype.AIMove = function(params){
             // firend 1 is the same tribe
             if(friends > 1 && empty.length>2 && this.energy >= 10 && (Math.random() < this.makeNewLife)){
                 var random = (Math.random()*empty.length)<<0;
-                game.tribes.push(new Tribe({
-                    energy: 100,
-                    makeNewLife: 0.05,
-                    follow: (7+(Math.random()*3)<<0) * 0.1,
-                    speed: (5+(Math.random()*5)<<0) * 0.1,
-                    pos: {
-                        x: empty[random].x,
-                        y: empty[random].y
-                    }
-                }));
+                game.spawnNewTribe({
+                    x:empty[random].x,
+                    y:empty[random].y
+                });
             }else
             if(Math.random() < this.follow){
                 var pointer = {
@@ -74,9 +68,9 @@ Tribe.prototype.AIMove = function(params){
                             }
                         };
                     }
-                    if(pointer.x > this.pos.x){
+                    if(pointer.x >= this.pos.x){
                         for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].x > empty[bestRoute].x){
+                            if(empty[i].x >= empty[bestRoute].x){
                                 bestRoute = i;
                             }
                         };
@@ -89,9 +83,9 @@ Tribe.prototype.AIMove = function(params){
                             }
                         };
                     }
-                    if(pointer.y > this.pos.y){
+                    if(pointer.y >= this.pos.y){
                         for (var i = 0; i < empty.length; i++) {
-                            if(empty[i].y > empty[bestRoute].y){
+                            if(empty[i].y >= empty[bestRoute].y){
                                 bestRoute = i;
                             }
                         };

@@ -42,6 +42,7 @@ var game = {
     sprites: [],
     tribesOnStart: 4,
     tribeSprite: null,
+    flagSprite: null,
     fps: 0,
     renderScreen: true,
     lastMouse: {x:0,y:0},
@@ -124,6 +125,12 @@ var game = {
             colorHead: [0,0,0],
             colorBody: [73,60,43]
         });
+
+        // flag
+        /*this.flagSprite = this.offflagSprite({
+            colorA: [0,0,0],
+            colorB: [73,60,43]
+        });*/
     },
 
     offSprite: function(params){
@@ -231,20 +238,26 @@ var game = {
         for (var i = 0; i < this.tribesOnStart; i++) {
             if(empty.length > 0){
                 random = (Math.random()*empty.length)<<0;
-
-                this.tribes.push(new Tribe({
-                    energy: 100,
-                    makeNewLife: 0.05,
-                    follow: (7+(Math.random()*3)<<0) * 0.1,
-                    speed: (5+(Math.random()*5)<<0) * 0.1,
-                    pos: {
-                        x: empty[random].x,
-                        y: empty[random].y
-                    }
-                }));
+                this.spawnNewTribe({
+                    x: empty[random].x,
+                    y: empty[random].y
+                });
                 empty = empty.slice(random);
             }
         };
+    },
+
+    spawnNewTribe: function(params){
+        this.tribes.push(new Tribe({
+            energy: 50,
+            makeNewLife: 0.05,
+            follow: (7+(Math.random()*3)<<0) * 0.1,
+            speed: (5+(Math.random()*5)<<0) * 0.1,
+            pos: {
+                x: params.x,
+                y: params.y
+            }
+        }));
     },
 
     isThereATribe: function(params){
