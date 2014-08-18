@@ -48,7 +48,7 @@ Tribe.prototype.AIMove = function(params){
                 this.energy = ((this.energy*0.5)<<0)-1;
             }else
             // firend 1 is the same tribe
-            if(friends > 1 && empty.length>2 && (Math.random() < this.makeNewLife)){
+            if(friends > 1 && empty.length>2 && this.energy >= 10 && (Math.random() < this.makeNewLife)){
                 var random = (Math.random()*empty.length)<<0;
                 game.tribes.push(new Tribe({
                     energy: 100,

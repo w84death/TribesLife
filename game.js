@@ -301,12 +301,23 @@ var game = {
     simulateLife: function(){
         game.grownTrees(    0.005);
         game.initNewLife(2, 0.001);
+        var terrain;
         for (var i = 0; i < game.tribes.length; i++) {
-            if(game.tribes[i].energy > 0){
-                game.tribes[i].AIMove();
-            }else{
-                game.tribes[i] = false;
-                game.tribes.slice(i);
+            if(game.tribes[i]){
+                terrain = game.world[game.tribes[i].pos.x][game.tribes[i].pos.y];
+                if( terrain === 1){
+                   game.tribes[i].energy--;
+                }
+                if( terrain === 2){
+                   game.tribes[i].energy += 20;
+                   game.world[game.tribes[i].pos.x][game.tribes[i].pos.y] = 1;
+                }
+                if(game.tribes[i].energy > 0){
+                    game.tribes[i].AIMove();
+                }else{
+                    game.tribes[i] = false;
+                    game.tribes.slice(i);
+                }
             }
         };
     },
