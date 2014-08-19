@@ -430,8 +430,9 @@ var game = {
         var deep = 4,
             islands = 0.02,
             ground = 0.2,
-            forest = 0.05;
+            forest = 0.2;
 
+        this.gameScore = 0;
 
         for (var x = 0; x < this.worldW; x++) {
             for (var y = 0; y < this.worldH; y++) {
@@ -608,12 +609,10 @@ var game = {
     },
 
     simulateLife: function(){
-
-        if(game.STATE !== 'game_over'){
-            game.timer++;
-        }
+        game.timer++;
 
         if(game.STATE == 'game'){
+            game.gameScore++;
             game.grownTrees(3, 0.005);
             game.initNewLife(3, 0.001);
             var terrain;
@@ -682,7 +681,7 @@ var game = {
         this.ctx.fillText('Tribes: '+this.tribes.length, this._W*0.5 << 0, 12);
 
         this.ctx.textAlign = 'right';
-        this.ctx.fillText('Score: '+this.timer, this._W - 12, 12);
+        this.ctx.fillText('Score: '+this.gameScore, this._W - 12, 12);
     },
 
     draw: function(dTime){
@@ -726,7 +725,20 @@ var game = {
 
             this.ctx.fillStyle = '#fff';
             this.ctx.font = 'bold 0.7em sans-serif';
-            this.ctx.fillText('Score: '+this.timer, this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
+            this.ctx.fillText('Score: '+this.gameScore, this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
+
+            if(this.timer % 2 == 1){
+                this.ctx.fillStyle = '#fff';
+                this.ctx.font = 'bold 0.7em sans-serif';
+                this.ctx.fillText('click to restart', this._W*0.5 << 0, (this._H*0.5 << 0) + 36);
+            }
+
+            if(this.pointerDraw){
+                this.generateWorld();
+                this.STATE = 'game';
+                this.pointerDraw = false;
+            }
+
 
         }
 
