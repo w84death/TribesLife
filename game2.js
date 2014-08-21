@@ -100,8 +100,8 @@ Gfx.prototype.init_tileset = function(){
     ctx.drawImage(this.sprites.tileset,0,0);
 
     this.tileset = [];
-    for (var x = 0; x < canvas.width/game.world.sprite_size; x++) {
-        for (var y = 0; y < canvas.height/game.world.sprite_size; y++) {
+    for (var y = 0; y < canvas.height/game.world.sprite_size; y++) {
+        for (var x = 0; x < canvas.width/game.world.sprite_size; x++) {
             this.tileset.push(
                 ctx.getImageData(
                     game.world.sprite_size * x,
@@ -112,6 +112,14 @@ Gfx.prototype.init_tileset = function(){
             );
         }
     }
+};
+Gfx.prototype.draw_tileset = function(){
+    for (var i = 0; i < this.tileset.length; i++) {
+        this.put_tile({
+            id:i, x:i, y:0, layer:1
+        });
+        game.layers[1].render = true;
+    };
 };
 Gfx.prototype.put_tile = function(params){
     game.layers[params.layer].ctx.putImageData(
@@ -181,11 +189,20 @@ Gui.prototype.draw_logo = function(params){
 };
 Gui.prototype.draw_fps = function(){
     var ctx = game.layers[this.layer].ctx;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(
+        game.screen.width-(5*game.world.sprite_size),
+        game.screen.height-(2*game.world.sprite_size),
+        game.world.sprite_size*4,
+        game.world.sprite_size);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 0.5em sans-serif';
+    ctx.font = 'bold 8px sans-serif';
     ctx.textBaseline = 'bottom';
-    ctx.textAlign = 'left';
-    ctx.fillText('FPS:'+game.fps, 6, 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('FPS:'+game.fps,
+        game.screen.width-game.world.sprite_size+1,
+        game.screen.height-game.world.sprite_size+1
+    );
 };
 Gui.prototype.draw_pointer = function(){
     var x = (game.pointer.pos.x / game.screen.scale) << 0,
@@ -337,6 +354,7 @@ var game = {
         this.generate_island();
         this.layers[0].render = true;
         this.timer = 0;
+        this.gfx.draw_tileset();
     },
 
     update: function(delta_time){
@@ -387,7 +405,7 @@ var game = {
                     for (var x = 0; x < this.world.width; x++) {
                         for (var y = 0; y < this.world.height; y++) {
                             this.gfx.put_tile({
-                                id:1,
+                                id:6,
                                 x:x,
                                 y:y,
                                 layer: 0
