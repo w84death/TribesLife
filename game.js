@@ -67,6 +67,7 @@ Gfx.prototype.init = function(params){
             ctx: ctx,
             render: false
         });
+        canvas.style.webkitTransform = ' scale('+game.screen.scale+')';
         document.getElementById('game').appendChild(canvas);
     };
 };
@@ -154,7 +155,7 @@ Gui.prototype.draw_intro = function(params){
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif';
+    ctx.font = "900 11px 'Source Code Pro', monospace,serif";
     ctx.strokeStyle = '#fff';
 
     ctx.fillText('P1X PRESENTS',
@@ -164,29 +165,42 @@ Gui.prototype.draw_intro = function(params){
 
     ctx.drawImage(game.gfx.sprites.logo,
         (game.screen.width*0.5 << 0)-24,
-        (game.screen.height*0.5 << 0)-8
+        (game.screen.height*0.5 << 0)-30
     );
-
-    game.layers[this.layer].ctx.beginPath();
-    game.layers[this.layer].ctx.moveTo(24,(game.screen.height*0.5 << 0) + 32);
-    game.layers[this.layer].ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0) + 32);
-    game.layers[this.layer].ctx.stroke();
-
-    game.layers[this.layer].ctx.fillText('JS13KGAME COMPO',
-        game.screen.width*0.5 << 0,
-        (game.screen.height*0.5 << 0)+54
-    );
-
-    if(game.timer % 2 == 1){
-        game.layers[this.layer].ctx.fillText('CLICK TO START',
-            game.screen.width*0.5 << 0,
-            (game.screen.height*0.5 << 0) + 70);
-    }
 
     ctx.beginPath();
-    ctx.moveTo(24,(game.screen.height*0.5 << 0) + 80);
-    ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0) + 80);
+    ctx.moveTo(24,(game.screen.height*0.5 << 0));
+    ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0));
     ctx.stroke();
+
+    ctx.fillText('8X8 SPRITES; 16 COLOUR PALETTE',
+        game.screen.width*0.5 << 0,
+        (game.screen.height*0.5 << 0)+18
+    );
+
+    game.layers[this.layer].ctx.fillText('P1X ENGINE V4; ZIP < 13KB',
+        game.screen.width*0.5 << 0,
+        (game.screen.height*0.5 << 0)+32
+    );
+
+    ctx.fillText('#JS13KGAME',
+        game.screen.width*0.5 << 0,
+        (game.screen.height*0.5 << 0)+48
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(24,(game.screen.height*0.5 << 0) + 56);
+    ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0) + 56);
+    ctx.stroke();
+
+    if(game.timer % 2 == 1){
+        ctx.fillText('CLICK TO START',
+            game.screen.width*0.5 << 0,
+            (game.screen.height*0.5 << 0) + 74
+        );
+    }
+
+
 
 
 };
@@ -194,16 +208,16 @@ Gui.prototype.draw_fps = function(){
     var ctx = game.layers[this.layer].ctx;
     ctx.fillStyle = '#000';
     ctx.fillRect(
-        game.screen.width-(5*game.world.sprite_size),
+        game.screen.width-(7*game.world.sprite_size),
         game.screen.height-(2*game.world.sprite_size),
-        game.world.sprite_size*4,
+        game.world.sprite_size*6,
         game.world.sprite_size);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = "900 9px 'Source Code Pro', monospace,serif";
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'right';
-    ctx.fillText('FPS:'+game.fps,
-        game.screen.width-game.world.sprite_size+1,
+    ctx.fillText('FPS '+game.fps,
+        game.screen.width-game.world.sprite_size-2,
         game.screen.height-game.world.sprite_size+1
     );
 };
@@ -291,7 +305,8 @@ var game = {
         sprite_size: 8,
         width: null,
         height: null,
-        islands: []
+        islands: [],
+        entities: []
     },
     pointer: {
         enable: false,
@@ -311,10 +326,6 @@ var game = {
         // canvas sizes
         this.screen.width = (window.innerWidth/this.screen.scale)<<0;
         this.screen.height = (window.innerHeight/this.screen.scale)<<0;
-        //this.canvas = document.getElementById('canvas');
-        //this.canvas.width = this.screen.width;
-        //this.canvas.height = this.screen.height;
-        //this.ctx = this.canvas.getContext('2d');
 
         // game world size (for now as big as screen)
         this.world.width = (this.screen.width/this.world.sprite_size)<<0;
@@ -325,12 +336,12 @@ var game = {
 
         // graphics init
         this.gfx.init({
-            layers: 3
+            layers: 4
         });
 
         // gui init
         this.gui.init({
-            layer: 2
+            layer: 3
         })
 
         // mouse events
@@ -345,7 +356,7 @@ var game = {
         this.world.islands.push({
             pos: {
                 x: (this.world.width*0.5<<0)-3,
-                y: (this.world.height*0.5<<0)-3,
+                y: (this.world.height*0.5<<0)-3
             },
             data: [
                 [2, 0, 0, 1, 0, 3],
@@ -353,8 +364,15 @@ var game = {
                 [1, 0,10,10, 1, 0],
                 [0,10, 1,10,10, 1],
                 [0, 1, 0, 1,10, 0],
-                [4, 0, 1, 0, 0, 5],
+                [4, 0, 1, 0, 0, 5]
             ]
+        });
+
+        this.world.entities.push({
+            pos: {
+                x: (this.world.width*0.5<<0)-1,
+                y: (this.world.height*0.5<<0)+1
+            },
         });
     },
 
@@ -370,6 +388,8 @@ var game = {
         this.pointer.enable = false;
         this.generate_island();
         this.layers[0].render = true;
+        this.layers[1].render = true;
+        this.layers[2].render = true;
         this.timer = 0;
         //this.gfx.draw_tileset();
     },
@@ -427,7 +447,10 @@ var game = {
                             });
                         }
                     }
+                    this.layers[0].render = false;
+                }
 
+                if(this.layers[1].render){
                     // render island
                     for (i = 0; i < this.world.islands.length; i++) {
                         var island = this.world.islands[i];
@@ -437,22 +460,29 @@ var game = {
                                     id:island.data[y][x],
                                     x:island.pos.x+x,
                                     y:island.pos.y+y,
-                                    layer: 0
+                                    layer: 1
                                 });
                             }
                         }
                     }
-                    this.layers[0].render = false;
-                }
-                // render entities
-                if(this.layers[1].render){
-                    for (x = 0; x < this.world.width; x++) {
-                        for (y = 0; y < this.world.height; y++) {
-
-                        }
-                    }
                     this.layers[1].render = false;
                 }
+
+                // render entities
+                if(this.layers[2].render){
+                    for(i in this.world.entities){
+                        var entity = this.world.entities[i];
+                        this.gfx.put_tile({
+                            id:8,
+                            x:entity.pos.x,
+                            y:entity.pos.y,
+                            layer: 2
+                        });
+
+                    }
+                    this.layers[2].render = false;
+                }
+
                 // render gui
                 this.gui.draw_fps();
                 this.gui.draw_logo({
