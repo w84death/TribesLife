@@ -44,23 +44,20 @@ Gfx.prototype.init = function(params){
     this.loaded = 0;
     this.sprites = {
         logo: new Image(),
+        logo_big: new Image(),
         pointer: new Image(),
         tileset: new Image()
     }
     this.sprites.logo.src = 'sprites/tribes_logo.png';
+    this.sprites.logo_big.src = 'sprites/tribes_logo_big.png';
     this.sprites.pointer.src = 'sprites/pointer.png';
     this.sprites.tileset.src = 'sprites/tileset.png';
 
-    this.sprites.logo.onload = function(){
-        game.gfx.loaded++;
-    };
-    this.sprites.pointer.onload = function(){
-        game.gfx.loaded++;
-    };
-    this.sprites.tileset.onload = function(){
-        game.gfx.loaded++;
-        game.gfx.init_tileset();
-    };
+    for (var key in this.sprites) {
+        this.sprites[key].onload = function(){
+            game.gfx.loaded++;
+        };
+    }
 
     for (var i = 0; i < params.layers; i++) {
         var canvas = document.createElement('canvas');
@@ -81,6 +78,7 @@ Gfx.prototype.load = function(){
         if (this.sprites.hasOwnProperty(key)) size++;
     }
     if(this.loaded >= size){
+        game.gfx.init_tileset();
         return true;
     }
     return false;
@@ -146,6 +144,13 @@ Gui.prototype.clear = function(){
     );
 };
 Gui.prototype.draw_logo = function(params){
+    game.layers[this.layer].ctx.drawImage(
+        game.gfx.sprites.logo,
+        (params.x*game.world.sprite_size)-24,
+        (params.y*game.world.sprite_size)-8
+    );
+};
+Gui.prototype.draw_intro = function(params){
     var ctx = game.layers[this.layer].ctx;
 
     ctx.textBaseline = 'bottom';
@@ -159,7 +164,7 @@ Gui.prototype.draw_logo = function(params){
         (game.screen.height*0.5 << 0) - 36
     );
 
-    ctx.drawImage(game.gfx.sprites.logo,
+    ctx.drawImage(game.gfx.sprites.logo_big,
         (game.screen.width*0.5 << 0)-96,
         (game.screen.height*0.5 << 0)-42
     );
@@ -287,7 +292,8 @@ var game = {
     world: {
         sprite_size: 8,
         width: null,
-        height: null
+        height: null,
+        islands: []
     },
     pointer: {
         enable: false,
@@ -338,7 +344,20 @@ var game = {
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     generate_island: function(params){
-
+        this.world.islands.push({
+            pos: {
+                x: (this.world.width*0.5<<0)-3,
+                y: (this.world.height*0.5<<0)-3,
+            },
+            data: [
+                [2, 0, 0, 1, 0, 3],
+                [0, 1,10,10, 0, 0],
+                [1, 0,10,10, 1, 0],
+                [0,10, 1,10,10, 1],
+                [0, 1, 0, 1,10, 0],
+                [4, 0, 1, 0, 0, 5],
+            ]
+        });
     },
 
     /*
@@ -354,7 +373,7 @@ var game = {
         this.generate_island();
         this.layers[0].render = true;
         this.timer = 0;
-        this.gfx.draw_tileset();
+        //this.gfx.draw_tileset();
     },
 
     update: function(delta_time){
@@ -391,33 +410,46 @@ var game = {
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     render: function(delta_time){
-        //this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
         this.gui.clear();
+        var i,x,y;
 
         switch(this.state){
             case 'intro':
-
-                this.gui.draw_logo();
+                this.gui.draw_intro();
             break;
             case 'game':
                 // render background terrain
                 if(this.layers[0].render){
-                    for (var x = 0; x < this.world.width; x++) {
-                        for (var y = 0; y < this.world.height; y++) {
+                    // render sea
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
                             this.gfx.put_tile({
-                                id:6,
-                                x:x,
-                                y:y,
+                                id:6,x:x,y:y,
                                 layer: 0
                             });
+                        }
+                    }
+
+                    // render island
+                    for (i = 0; i < this.world.islands.length; i++) {
+                        var island = this.world.islands[i];
+                        for (x = 0; x < island.data.length; x++) {
+                            for (y = 0; y < island.data[x].length; y++) {
+                                this.gfx.put_tile({
+                                    id:island.data[y][x],
+                                    x:island.pos.x+x,
+                                    y:island.pos.y+y,
+                                    layer: 0
+                                });
+                            }
                         }
                     }
                     this.layers[0].render = false;
                 }
                 // render entities
                 if(this.layers[1].render){
-                    for (var x = 0; x < this.world.width; x++) {
-                        for (var y = 0; y < this.world.height; y++) {
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
 
                         }
                     }
@@ -425,6 +457,10 @@ var game = {
                 }
                 // render gui
                 this.gui.draw_fps();
+                this.gui.draw_logo({
+                    x:(this.world.width*0.5)<<0,
+                    y:2
+                });
             break;
             case 'game_over':
                 this.gui.draw_game_over();
