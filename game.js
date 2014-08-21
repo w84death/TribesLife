@@ -1,18 +1,25 @@
 /*
-----------------------------------------------------------------------------
+*
+*
+*   P1X, Krzysztof Jankowski
+*   TRIBES rev2
+*
+*   abstract: game for the js13k compo
+*   created: 21-08-2014
+*   license: do what you want and dont bother me
+*
+*   webpage: http://p1x.in
+*   twitter: @w84death
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-    P1X, Krzysztof Jankowski
-    TRIBES LIFE
 
-    abstract: Game for the js13k compo
-    created: 17-08-2014
-    license: do what you want and dont bother me
 
-    webpage: http://p1x.in
-    twitter: @w84death
-
-----------------------------------------------------------------------------
-*/
+/*
+*
+*   request animation, force 60fps rendering
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 window.requestAnimFrame = (function(){
   return  window.requestAnimationFrame       ||
@@ -26,809 +33,482 @@ window.requestAnimFrame = (function(){
 })();
 
 
-// ENTITIES
+/*
+*
+*   graphics functions
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-var Tribe = function(params){
-    this.energy = params.energy;
-    this.makeNewLife = params.makeNewLife;
-    this.follow = params.follow;
-    this.speed = params.speed;
-    this.renderSpeed = 0.01;
-    this.pos = {
-        x: params.pos.x,
-        y: params.pos.y
-    };
-    this.renderPos = {
-        x: params.pos.x * game.spriteSize,
-        y: params.pos.y * game.spriteSize
-    };
-    following = false;
-};
-
-Tribe.prototype.renderMove = function(dTime){
-    var screenX = this.pos.x*game.spriteSize,
-        screenY = this.pos.y*game.spriteSize;
-
-    if(screenX !== this.renderPos.x || screenY !== this.renderPos.y){
-        if(screenX < this.renderPos.x){
-            this.renderPos.x -= dTime * this.renderSpeed;
-        }
-        if(screenX > this.renderPos.x){
-            this.renderPos.x += dTime * this.renderSpeed;
-        }
-        if(screenY < this.renderPos.y){
-            this.renderPos.y -= dTime * this.renderSpeed;
-        }
-        if(screenY > this.renderPos.y){
-            this.renderPos.y += dTime * this.renderSpeed;
-        }
+var Gfx = function(){};
+Gfx.prototype.init = function(params){
+    this.loaded = 0;
+    this.sprites = {
+        logo: new Image(),
+        pointer: new Image(),
+        tileset: new Image()
     }
-}
+    this.sprites.logo.src = 'sprites/tribes_logo.png';
+    this.sprites.pointer.src = 'sprites/pointer.png';
+    this.sprites.tileset.src = 'sprites/tileset.png';
 
-Tribe.prototype.AIMove = function(){
+    for (var key in this.sprites) {
+        this.sprites[key].onload = function(){
+            game.gfx.loaded++;
+        };
+    }
 
-    var empty = [],
-        bestRoute = 0,
-        friends = 0;
+    for (var i = 0; i < params.layers; i++) {
+        var canvas = document.createElement('canvas');
+        canvas.width = game.screen.width;
+        canvas.height = game.screen.height;
+        var ctx = canvas.getContext("2d");
+        game.layers.push({
+            canvas: canvas,
+            ctx: ctx,
+            render: false
+        });
+        document.getElementById('game').appendChild(canvas);
+    };
+};
+Gfx.prototype.load = function(){
+    var size = 0, key;
+    for (key in this.sprites) {
+        if (this.sprites.hasOwnProperty(key)) size++;
+    }
+    if(this.loaded >= size){
+        game.gfx.init_tileset();
+        return true;
+    }
+    return false;
+};
+Gfx.prototype.clear = function(layer){
+    game.layers[layer].ctx.clearRect(
+        0, 0,
+        game.screen.width, game.screen.height
+    );
+};
+Gfx.prototype.init_tileset = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = this.sprites.tileset.width;
+    canvas.height = this.sprites.tileset.height;
+    var ctx = canvas.getContext("2d");
 
-    if(Math.random() < this.speed){
+    ctx.drawImage(this.sprites.tileset,0,0);
 
-        for (var x = this.pos.x-1; x <= this.pos.x+1; x++) {
-            for (var y = this.pos.y-1; y <= this.pos.y+1; y++) {
-                if(game.world[x] && game.world[x][y] && game.world[x][y] > 0){
-                    if(!game.isThereATribe({x:x,y:y})){
-                        empty.push({x:x,y:y});
-                    }else{
-                        friends++;
-                    }
-                }
-            }
-        }
-
-        if(empty.length>0){
-
-            // to many tribes!
-            if(friends >= 5){
-                this.energy = ((this.energy*0.5)<<0)-1;
-            }
-
-            // good vibe for sex :>
-            if(friends > 1 && empty.length>2 && this.energy >= 10 && (Math.random() < this.makeNewLife)){
-                var random = (Math.random()*empty.length)<<0;
-                game.spawnNewTribe({
-                    x:empty[random].x,
-                    y:empty[random].y
-                });
-            }
-
-            // folow the god's way?
-            if(game.flag && Math.random() < this.follow){
-
-                this.following = true;
-
-                if(game.flag.x < this.pos.x){
-                    for (var i = 0; i < empty.length; i++) {
-                        if(empty[i].x < empty[bestRoute].x){
-                            bestRoute = i;
-                        }
-                    };
-                }
-
-                if(game.flag.x > this.pos.x){
-                    for (var i = 0; i < empty.length; i++) {
-                        if(empty[i].x > empty[bestRoute].x){
-                            bestRoute = i;
-                        }
-                    };
-                }
-
-                if(game.flag.x === this.pos.x){
-                   for (var i = 0; i < empty.length; i++) {
-                        if(game.flag.y > this.pos.y && empty[i].y > this.pos.y){
-                            bestRoute = i;
-                        }
-                        if(game.flag.y < this.pos.y && empty[i].y < this.pos.y){
-                            bestRoute = i;
-                        }
-                    };
-                }
-
-                if(game.flag.y < this.pos.y){
-                    for (var i = 0; i < empty.length; i++) {
-                        if(empty[i].y < empty[bestRoute].y){
-                            bestRoute = i;
-                        }
-                    };
-                }
-                if(game.flag.y > this.pos.y){
-                    for (var i = 0; i < empty.length; i++) {
-                        if(empty[i].y > empty[bestRoute].y){
-                            bestRoute = i;
-                        }
-                    };
-                }
-
-                if(game.flag.y === this.pos.y){
-                   for (var i = 0; i < empty.length; i++) {
-                        if(empty[i].y === game.flag.y){
-                            if(game.flag.x > this.pos.x && empty[i].x > this.pos.x){
-                                bestRoute = i;
-                            }
-                            if(game.flag.x < this.pos.x && empty[i].x < this.pos.x){
-                                bestRoute = i;
-                            }
-                        }
-                    };
-                }
-
-                this.pos.x = empty[bestRoute].x;
-                this.pos.y = empty[bestRoute].y;
-            }else{
-                // or move free
-                this.following = false;
-                var random = (Math.random()*empty.length)<<0;
-                this.pos.x = empty[random].x;
-                this.pos.y = empty[random].y;
-            }
+    this.tileset = [];
+    for (var y = 0; y < canvas.height/game.world.sprite_size; y++) {
+        for (var x = 0; x < canvas.width/game.world.sprite_size; x++) {
+            this.tileset.push(
+                ctx.getImageData(
+                    game.world.sprite_size * x,
+                    game.world.sprite_size * y,
+                    game.world.sprite_size,
+                    game.world.sprite_size
+                )
+            );
         }
     }
 };
+Gfx.prototype.draw_tileset = function(){
+    for (var i = 0; i < this.tileset.length; i++) {
+        this.put_tile({
+            id:i, x:i, y:0, layer:1
+        });
+        game.layers[1].render = true;
+    };
+};
+Gfx.prototype.put_tile = function(params){
+    game.layers[params.layer].ctx.putImageData(
+        this.tileset[params.id],
+        params.x*game.world.sprite_size,
+        params.y*game.world.sprite_size
+    );
+};
 
-// GAME
+/*
+*
+*   gui functions
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+var Gui = function(){};
+Gui.prototype.init = function(params){
+    this.layer = params.layer;
+};
+Gui.prototype.clear = function(){
+    game.layers[this.layer].ctx.clearRect(
+        0, 0,
+        game.screen.width, game.screen.height
+    );
+};
+Gui.prototype.draw_logo = function(params){
+    game.layers[this.layer].ctx.drawImage(
+        game.gfx.sprites.logo,
+        (params.x*game.world.sprite_size)-24,
+        (params.y*game.world.sprite_size)-8
+    );
+};
+Gui.prototype.draw_intro = function(params){
+    var ctx = game.layers[this.layer].ctx;
+
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.strokeStyle = '#fff';
+
+    ctx.fillText('P1X PRESENTS',
+        game.screen.width*0.5 << 0,
+        (game.screen.height*0.5 << 0) - 36
+    );
+
+    ctx.drawImage(game.gfx.sprites.logo,
+        (game.screen.width*0.5 << 0)-24,
+        (game.screen.height*0.5 << 0)-8
+    );
+
+    game.layers[this.layer].ctx.beginPath();
+    game.layers[this.layer].ctx.moveTo(24,(game.screen.height*0.5 << 0) + 32);
+    game.layers[this.layer].ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0) + 32);
+    game.layers[this.layer].ctx.stroke();
+
+    game.layers[this.layer].ctx.fillText('JS13KGAME COMPO',
+        game.screen.width*0.5 << 0,
+        (game.screen.height*0.5 << 0)+54
+    );
+
+    if(game.timer % 2 == 1){
+        game.layers[this.layer].ctx.fillText('CLICK TO START',
+            game.screen.width*0.5 << 0,
+            (game.screen.height*0.5 << 0) + 70);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(24,(game.screen.height*0.5 << 0) + 80);
+    ctx.lineTo(game.screen.width-24,(game.screen.height*0.5 << 0) + 80);
+    ctx.stroke();
+
+
+};
+Gui.prototype.draw_fps = function(){
+    var ctx = game.layers[this.layer].ctx;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(
+        game.screen.width-(5*game.world.sprite_size),
+        game.screen.height-(2*game.world.sprite_size),
+        game.world.sprite_size*4,
+        game.world.sprite_size);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'right';
+    ctx.fillText('FPS:'+game.fps,
+        game.screen.width-game.world.sprite_size+1,
+        game.screen.height-game.world.sprite_size+1
+    );
+};
+Gui.prototype.draw_pointer = function(){
+    var x = (game.pointer.pos.x / game.screen.scale) << 0,
+        y = (game.pointer.pos.y / game.screen.scale) << 0;
+
+    game.layers[this.layer].ctx.drawImage(game.gfx.sprites.pointer,
+        x,
+        y
+    );
+};
+
+/*
+*
+*   input function
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+var Input = function(){};
+Input.prototype.init = function(){
+    document.body.addEventListener('mousedown', this.enable_pointer, false);
+    document.body.addEventListener('mouseup', this.disable_pointer, false);
+    document.body.addEventListener('mousemove', this.track_pointer, false);
+    document.body.addEventListener("contextmenu", function(e){
+        e.preventDefault();
+    }, false);
+};
+Input.prototype.enable_pointer = function(e){
+    e.preventDefault();
+    var x,y;
+    if(e.touches){
+        x = e.touches[0].pageX;
+        y = e.touches[0].pageY;
+    }else{
+        x = e.pageX;
+        y = e.pageY;
+    }
+    game.pointer.enable = true;
+    //game.putFlag(x, y);
+};
+Input.prototype.disable_pointer = function(){
+    game.pointer.enable = false;
+};
+Input.prototype.track_pointer = function(e){
+    e.preventDefault();
+    var x,y;
+    if(e.touches){
+        x = e.touches[0].pageX;
+        y = e.touches[0].pageY;
+    }else{
+        x = e.pageX;
+        y = e.pageY;
+    }
+    game.pointer.pos.x = x;
+    game.pointer.pos.y = y;
+    if(game.pointer.enable){
+        //game.makeNewLand(x,y, event.which == 1 ? 1 : 0 );
+    }
+};
+
+/*
+*
+*   main game function
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
 var game = {
-    STATE: 'intro',
-    timer: 0,
-    gameScore: 0,
-    _W: null,
-    _H: null,
+
+    gfx: new Gfx(),
+    gui: new Gui(),
+    input: new Input(),
+
+    fps: 0,
+    layers: [],
     canvas: null,
     ctx: null,
-    worldW: null,
-    worldH: null,
-    world: [],
-    randomSpritesMask: [],
-    screenScale: 6,
-    spriteSize: 6,
-    spritesVariants: 8,
-    sprites: [],
-    tribesOnStart: 3,
-    tribeSprite: null,
-    flagSprite: null,
-    flag: false,
-    fps: 0,
-    renderScreen: true,
-    lastMouse: {x:0,y:0},
-    pointer: {x:0,y:0},
-    tribes: [],
+    screen: {
+        width: null,
+        height: null,
+        scale: 4
+    },
+    world: {
+        sprite_size: 8,
+        width: null,
+        height: null,
+        islands: []
+    },
+    pointer: {
+        enable: false,
+        pos: {
+            x: null,
+            y: null
+        }
+    },
+    state: 'loading',
+    timer: 0,
+
+    /*
+    *   init the engine
+    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     init: function(){
-        this._W = (window.innerWidth/this.spriteSize)<<0;
-        this._H = (window.innerHeight/this.spriteSize)<<0;
-        this.canvas = document.getElementById('canvas');
-        this.canvas.width = this._W;
-        this.canvas.height = this._H;
-        this.ctx = this.canvas.getContext('2d');
+        // canvas sizes
+        this.screen.width = (window.innerWidth/this.screen.scale)<<0;
+        this.screen.height = (window.innerHeight/this.screen.scale)<<0;
+        //this.canvas = document.getElementById('canvas');
+        //this.canvas.width = this.screen.width;
+        //this.canvas.height = this.screen.height;
+        //this.ctx = this.canvas.getContext('2d');
 
-        this.worldW = (this._W/this.spriteSize) <<0;
-        this.worldH = (this._H/this.spriteSize) <<0;
+        // game world size (for now as big as screen)
+        this.world.width = (this.screen.width/this.world.sprite_size)<<0;
+        this.world.height = (this.screen.height/this.world.sprite_size)<<0;
 
-        this.world = [this.worldW];
-        for (var x = 0; x < this.worldW; x++){
-            this.world[x] = [this.worldH];
-        }
+        // init game timer
+        window.setInterval(game.inc_timer,500);
 
-        for (var i = 0; i < this.worldW * this.worldH; i++) {
-            this.randomSpritesMask.push((Math.random()*this.spritesVariants)<<0 );
-        };
-
-        this.generateSprites();
-        this.generateWorld();
-
-        window.setInterval(game.simulateLife,500);
-
-        this.canvas.addEventListener('mousedown', enable_pointer, false);
-        this.canvas.addEventListener('mouseup', disable_pointer, false);
-        this.canvas.addEventListener('mousemove', track_pointer, false);
-
-        this.canvas.addEventListener('touchstart', enable_pointer, false);
-        this.canvas.addEventListener('touchend', disable_pointer, false);
-        this.canvas.addEventListener('touchcancel', disable_pointer, false);
-        this.canvas.addEventListener('touchmove', track_pointer, false);
-
-        this.canvas.addEventListener("contextmenu", function(e){
-            e.preventDefault();
-        }, false);
-
-        function enable_pointer(e){
-            e.preventDefault();
-            var x,y;
-            if(e.touches){
-                x = e.touches[0].pageX;
-                y = e.touches[0].pageY;
-            }else{
-                x = e.pageX;
-                y = e.pageY;
-            }
-            game.pointerDraw = true;
-            game.putFlag(x, y);
-        }
-        function disable_pointer(){
-            game.pointerDraw = false;
-        }
-        function track_pointer(e){
-            e.preventDefault();
-            var x,y;
-            if(e.touches){
-                x = e.touches[0].pageX;
-                y = e.touches[0].pageY;
-            }else{
-                x = e.pageX;
-                y = e.pageY;
-            }
-            game.pointer.x = x;
-            game.pointer.y = y;
-            if(game.pointerDraw){
-
-                game.makeNewLand(x,y, event.which == 1 ? 1 : 0 );
-            }
-        }
-    },
-
-    generateSprites: function(){
-        // water
-        for (var i = 0; i < this.spritesVariants; i++) {
-            this.sprites.push(this.offSprite({
-                colorA: [49,162,242],
-                colorB: [178,220,239]
-            }));
-        };
-
-        // earth
-        for (var i = 0; i < this.spritesVariants; i++) {
-            this.sprites.push(this.offSprite({
-                colorA: [164,100,34],
-                colorB: [235,137,49]
-            }));
-        };
-
-        // sand
-        for (var i = 0; i < this.spritesVariants; i++) {
-            this.sprites.push(this.offSprite({
-                colorA: [235,137,49],
-                colorB: [247,226,107]
-            }));
-        };
-
-
-        // forest
-        for (var i = 0; i < this.spritesVariants; i++) {
-            this.sprites.push(this.offSprite({
-                colorA: [68,137,26],
-                colorB: [163,206,39]
-            }));
-        };
-
-/*
-        // tribe
-        this.tribeSprite = this.offTribeSprite({
-            colorHead: [0,0,0],
-            colorBody: [73,60,43],
-            colorBG: [235,137,49]
+        // graphics init
+        this.gfx.init({
+            layers: 3
         });
 
-        // flag
-        this.flagSprite = this.offFlagSprite({
-            colorA: [190,38,51],
-            colorB: [73,60,43],
-            colorBG: [235,137,49]
-        });*/
+        // gui init
+        this.gui.init({
+            layer: 2
+        })
+
+        // mouse events
+        this.input.init();
     },
 
-    offSprite: function(params){
-        var imageData = this.ctx.getImageData(0, 0, this.spriteSize, this.spriteSize),
-            pixels = imageData.data,
-            n = pixels.length,
-            i = 0,
-            colors = [params.colorA, params.colorB];
+    /*
+    *   procedural island generation
+    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-        while (i <= n) {
-            var c =  Math.random()>0.3 ? 1 : 0;
-            pixels[i++] = colors[c][0];
-            pixels[i++] = colors[c][1];
-            pixels[i++] = colors[c][2];
-            pixels[i++] = 255;
-        }
-
-        return imageData;
-    },
-
-    offTribeSprite: function(params){
-        var imageData = this.ctx.getImageData(0, 0, this.spriteSize, this.spriteSize),
-            pixels = imageData.data,
-            n = pixels.length,
-            i = 0;
-
-        while (i <= n) {
-            if(i == 15*4){
-                pixels[i++] = params.colorHead[0];
-                pixels[i++] = params.colorHead[1];
-                pixels[i++] = params.colorHead[2];
-                pixels[i++] = 255;
-            }else
-            if(i==20*4 || i==21*4 || i==22*4 || i==27*4 || i ==32*4 || i==34*4){
-                pixels[i++] = params.colorBody[0];
-                pixels[i++] = params.colorBody[1];
-                pixels[i++] = params.colorBody[2];
-                pixels[i++] = 255;
-            }else{
-                pixels[i++] = params.colorBG[0];
-                pixels[i++] = params.colorBG[1];
-                pixels[i++] = params.colorBG[2];
-                pixels[i++] = 255;
-            }
-        }
-
-        return imageData;
-    },
-
-    offTribeSpriteLive: function(params){
-        var imageData = this.ctx.getImageData(params.x, params.y, this.spriteSize, this.spriteSize),
-            pixels = imageData.data,
-            n = pixels.length,
-            i = 0;
-
-        while (i <= n) {
-            if(i == 15*4){
-                pixels[i++] = params.colorHead[0];
-                pixels[i++] = params.colorHead[1];
-                pixels[i++] = params.colorHead[2];
-                pixels[i++] = 255;
-            }else
-            if(i==20*4 || i==21*4 || i==22*4 || i==27*4 || i ==32*4 || i==34*4){
-                pixels[i++] = params.colorBody[0];
-                pixels[i++] = params.colorBody[1];
-                pixels[i++] = params.colorBody[2];
-                pixels[i++] = 255;
-            }else{
-                i+=4;
-            }
-        }
-
-        return imageData;
-    },
-
-
-    offFlagSpriteLive: function(params){
-        var imageData = this.ctx.getImageData(params.x, params.y, this.spriteSize, this.spriteSize),
-            pixels = imageData.data,
-            n = pixels.length,
-            i = 0;
-
-        while (i <= n) {
-            if( (i > 7*4 && i < 12*4) || (i > 13*4 && i < 17*4) || (i > 19*4 && i < 24*4) ){
-                pixels[i++] = params.colorA[0];
-                pixels[i++] = params.colorA[1];
-                pixels[i++] = params.colorA[2];
-                pixels[i++] = 255;
-            }else
-            if(i==7*4 || i==13*4 || i==19*4 || i==25*4 || i ==31*4){
-                pixels[i++] = params.colorB[0];
-                pixels[i++] = params.colorB[1];
-                pixels[i++] = params.colorB[2];
-                pixels[i++] = 255;
-            }else{
-                i+=4;
-            }
-        }
-
-        return imageData;
-    },
-
-    generateWorld: function(){
-        var deep = 4,
-            islands = 0.02,
-            ground = 0.2,
-            forest = 0.2;
-
-        this.gameScore = 0;
-
-        for (var x = 0; x < this.worldW; x++) {
-            for (var y = 0; y < this.worldH; y++) {
-                if(Math.random()<= islands && x>4 && x < this.worldW - 4 && y > 4 && y < this.worldH - 4){
-                    this.world[x][y] = 1;
-                }else{
-                    this.world[x][y] = 0;
-                }
-            }
-        }
-
-        for (var i = 0; i < deep; i++) {
-            for (var x = 2; x < this.worldW-2; x++) {
-                for (var y = 2; y < this.worldH-2; y++) {
-                    if(this.world[x][y] == 1){
-                        this.world[x-1][y] = Math.random()<ground ? 1 : this.world[x-1][y];
-                        this.world[x+1][y] = Math.random()<ground ? 1 : this.world[x+1][y];
-                        this.world[x][y-1] = Math.random()<ground ? 1 : this.world[x][y-1];
-                        this.world[x][y+1] = Math.random()<ground ? 1 : this.world[x][y+1];
-
-                        this.world[x-1][y-1] = Math.random()<ground ? 1 : this.world[x-1][y-1];
-                        this.world[x+1][y-1] = Math.random()<ground ? 1 : this.world[x+1][y-1];
-                        this.world[x-1][y+1] = Math.random()<ground ? 1 : this.world[x-1][y+1];
-                        this.world[x+1][y+1] = Math.random()<ground ? 1 : this.world[x+1][y+1];
-                    }
-                }
-            }
-        };
-
-        this.makeDunes();
-        this.initNewLife(3, forest);
-        this.grownTrees(3, ground*2);
-
-        this.initTribes();
-    },
-
-    makeDunes: function(){
-        for (var x = 1; x < this.worldW-1; x++) {
-            for (var y = 1; y < this.worldH-1; y++) {
-                if(this.world[x][y] === 1 && (
-                    this.world[x-1][y] === 0 ||
-                    this.world[x+1][y] === 0 ||
-                    this.world[x][y-1] === 0 ||
-                    this.world[x][y+1] === 0 ||
-                    this.world[x-1][y-1] === 0 ||
-                    this.world[x+1][y-1] === 0 ||
-                    this.world[x-1][y+1] === 0 ||
-                    this.world[x+1][y+1] === 0)){
-                        this.world[x][y] = 2;
-                }
-                if(this.world[x][y] === 2 && (
-                    this.world[x-1][y] > 0 &&
-                    this.world[x+1][y] > 0 &&
-                    this.world[x][y-1] > 0 &&
-                    this.world[x][y+1] > 0 &&
-                    this.world[x-1][y-1] > 0 &&
-                    this.world[x+1][y-1] > 0 &&
-                    this.world[x-1][y+1] > 0 &&
-                    this.world[x+1][y+1] > 0)){
-                        this.world[x][y] = 1;
-                }
-            }
-        }
-    },
-
-    initTribes: function(){
-        var empty = [],
-            random;
-
-        for (var x = 1; x < this.worldW-1; x++) {
-            for (var y = 1; y < this.worldH-1; y++) {
-                if(this.world[x][y] + this.world[x-1][y] + this.world[x+1][y] + this.world[x][y-1] + this.world[x][y+1] == 5){
-                        empty.push({x:x, y:y});
-                }
-            }
-        }
-
-        for (var i = 0; i < this.tribesOnStart; i++) {
-            if(empty.length > 0){
-                random = (Math.random()*empty.length)<<0;
-                this.spawnNewTribe({
-                    x: empty[random].x,
-                    y: empty[random].y
-                });
-                empty = empty.splice(random,1);
-            }
-        };
-    },
-
-    spawnNewTribe: function(params){
-        this.tribes.push(new Tribe({
-            energy: 50,
-            makeNewLife: 0.05,
-            follow: (7+(Math.random()*3)<<0) * 0.1,
-            speed: (5+(Math.random()*5)<<0) * 0.1,
+    generate_island: function(params){
+        this.world.islands.push({
             pos: {
-                x: params.x,
-                y: params.y
-            }
-        }));
+                x: (this.world.width*0.5<<0)-3,
+                y: (this.world.height*0.5<<0)-3,
+            },
+            data: [
+                [2, 0, 0, 1, 0, 3],
+                [0, 1,10,10, 0, 0],
+                [1, 0,10,10, 1, 0],
+                [0,10, 1,10,10, 1],
+                [0, 1, 0, 1,10, 0],
+                [4, 0, 1, 0, 0, 5],
+            ]
+        });
     },
 
-    isThereATribe: function(params){
-        for (var i = 0; i < this.tribes.length; i++) {
-            if(this.tribes[i] && this.tribes[i].pos.x === params.x && this.tribes[i].pos.y === params.y){
-                return true;
-            }
-        };
-        return false;
-    },
+    /*
+    *   game logic
+    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-    initNewLife: function(type, pobability){
-        for (var x = 1; x < this.worldW-1; x++) {
-            for (var y = 1; y < this.worldH-1; y++) {
-                if(this.world[x][y] + this.world[x-1][y] + this.world[x+1][y] + this.world[x][y-1] + this.world[x][y+1] == 5 && Math.random()<pobability){
-                        this.world[x][y] = type;
-                }
-            }
-        }
-    },
-
-    grownTrees: function(sprite, ground){
-        for (var x = 1; x < this.worldW-1; x++) {
-            for (var y = 1; y < this.worldH-1; y++) {
-                if(this.world[x][y] == sprite){
-                    if(this.world[x-1][y] == 1) this.world[x-1][y] = Math.random()<ground ? sprite : this.world[x-1][y];
-                    if(this.world[x+1][y] == 1) this.world[x+1][y] = Math.random()<ground ? sprite : this.world[x+1][y];
-                    if(this.world[x][y-1] == 1) this.world[x][y-1] = Math.random()<ground ? sprite : this.world[x][y-1];
-                    if(this.world[x][y+1] == 1) this.world[x][y+1] = Math.random()<ground ? sprite : this.world[x][y+1];
-
-                    if(this.world[x-1][y-1] == 1) this.world[x-1][y-1] = Math.random()<ground ? sprite : this.world[x-1][y-1];
-                    if(this.world[x+1][y-1] == 1) this.world[x+1][y-1] = Math.random()<ground ? sprite : this.world[x+1][y-1];
-                    if(this.world[x-1][y+1] == 1) this.world[x-1][y+1] = Math.random()<ground ? sprite : this.world[x-1][y+1];
-                    if(this.world[x+1][y+1] == 1) this.world[x+1][y+1] = Math.random()<ground ? sprite : this.world[x+1][y+1];
-                }
-            }
-        }
-    },
-
-    makeNewLand: function(x,y, type){
-        var x = (x / game.screenScale / game.spriteSize) << 0,
-            y = (y / game.screenScale / game.spriteSize) << 0;
-
-        if(game.world[x] && x > 0 && y > 0 && x < game.worldW-1 && y < game.worldH-1) {
-            if( (type === 1 && game.world[x][y] === 0 ) || (type === 0 && game.world[x][y] > 0)){
-                if(game.lastMouse.x !== x || game.lastMouse.y !== y){
-                    game.world[x][y] = type;
-                    game.lastMouse.x = x;
-                    game.lastMouse.y = y;
-                    game.makeDunes();
-                }
-            }
-        }
-    },
-
-    putFlag: function(x,y){
-        var x = (x / game.screenScale / game.spriteSize) << 0,
-            y = (y / game.screenScale / game.spriteSize) << 0;
-
-        if(game.flag && game.flag.x === x && game.flag.y === y){
-            game.flag = false;
-        }else
-        if(game.world[x] && game.world[x][y] > 0) {
-            game.flag = {
-                x:x,
-                y:y
-            };
-        }
-    },
-
-    killTribe: function(i){
-        game.tribes[i] = false;
-        game.tribes.splice(i,1);
-    },
-
-    simulateLife: function(){
+    inc_timer: function(){
         game.timer++;
+    },
 
-        if(game.STATE == 'game'){
-            game.gameScore++;
-            game.grownTrees(3, 0.005);
-            game.initNewLife(3, 0.001);
-            var terrain;
-            for (var i = 0; i < game.tribes.length; i++) {
-                if(game.tribes[i]){
-                    terrain = game.world[game.tribes[i].pos.x][game.tribes[i].pos.y];
-                    if( terrain === 0){
-                       game.killTribe(i);
-                    }
-                    if( terrain === 1){
-                       game.tribes[i].energy-=1;
-                    }
-                    if( terrain === 2){
-                       game.tribes[i].energy-=4;
-                    }
-                    if( terrain === 3 && game.tribes[i].energy < 50){
-                       game.tribes[i].energy += 20;
-                       game.world[game.tribes[i].pos.x][game.tribes[i].pos.y] = 1;
-                    }
-                    if(game.tribes[i].energy > 0){
-                        game.tribes[i].AIMove();
-                    }else{
-                        game.killTribe(i);
-                    }
+    new_game: function(){
+        this.pointer.enable = false;
+        this.generate_island();
+        this.layers[0].render = true;
+        this.timer = 0;
+        //this.gfx.draw_tileset();
+    },
+
+    update: function(delta_time){
+
+        switch(this.state){
+            case 'loading':
+                if(this.gfx.load()){
+                    this.state = 'intro';
                 }
-            }
+            break;
+            case 'intro':
+                if(this.pointer.enable){
+                    this.new_game();
+                    this.state = 'game';
+                }
+            break;
+            case 'game':
+
+                // ?
+
+            break;
+            case 'game_over':
+                if(this.pointer.enable){
+                    this.new_game();
+                    this.state = 'game';
+                }
+            break;
         }
 
-        if(game.tribes.length < 1){
-            game.STATE = 'game_over';
-        }
     },
 
-    drawFPS: function(){
-        this.ctx.fillStyle = '#000';
-        this.ctx.font = 'bold 0.5em sans-serif';
-        this.ctx.textBaseline = 'bottom';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('FPS:'+this.fps, 6, 12);
-    },
+    /*
+    *   render game graphics
+    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-    drawCursor: function(){
-        var x = (this.pointer.x / game.screenScale) << 0 ,
-            y = (this.pointer.y / game.screenScale) << 0;
+    render: function(delta_time){
+        this.gui.clear();
+        var i,x,y;
 
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x,0);
-        this.ctx.lineTo(x,this._H);
-        this.ctx.strokeStyle = '#fff';
-        this.ctx.stroke();
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(0,y);
-        this.ctx.lineTo(this._W,y);
-        this.ctx.stroke();
-    },
-
-    drawGUI: function(){
-
-        this.ctx.textBaseline = 'bottom';
-        this.ctx.textAlign = 'center';
-
-        this.ctx.fillStyle = '#000';
-        this.ctx.font = 'bold 0.5em sans-serif';
-        this.ctx.fillText('Tribes: '+this.tribes.length, this._W*0.5 << 0, 12);
-
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText('Score: '+this.gameScore, this._W - 12, 12);
-    },
-
-    draw: function(dTime){
-        var sprite = 0,
-         i, x, y;
-        this.dTime = dTime;
-
-        this.ctx.clearRect(0, 0, this._W, this._H);
-
-        if( this.STATE == 'intro'){
-            this.ctx.textBaseline = 'bottom';
-            this.ctx.textAlign = 'center';
-
-            this.ctx.fillStyle = '#eb8931';
-            this.ctx.font = 'bold 1em sans-serif';
-            this.ctx.fillText('Tribes Life', this._W*0.5 << 0, this._H*0.5 << 0);
-
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 0.7em sans-serif';
-            this.ctx.fillText('A game of life for js13kgames', this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
-
-            if(this.timer % 2 == 1){
-                this.ctx.fillStyle = '#fff';
-                this.ctx.font = 'bold 0.7em sans-serif';
-                this.ctx.fillText('click to start', this._W*0.5 << 0, (this._H*0.5 << 0) + 36);
-            }
-
-            if(this.pointerDraw){
-                this.STATE = 'game';
-                this.pointerDraw = false;
-            }
-
-        }
-
-        if( this.STATE == 'game_over'){
-            this.ctx.textBaseline = 'bottom';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillStyle = '#eb8931';
-            this.ctx.font = 'bold 1em sans-serif';
-            this.ctx.fillText('Game Over', this._W*0.5 << 0, this._H*0.5 << 0);
-
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 0.7em sans-serif';
-            this.ctx.fillText('Score: '+this.gameScore, this._W*0.5 << 0, (this._H*0.5 << 0) + 12);
-
-            if(this.timer % 2 == 1){
-                this.ctx.fillStyle = '#fff';
-                this.ctx.font = 'bold 0.7em sans-serif';
-                this.ctx.fillText('click to restart', this._W*0.5 << 0, (this._H*0.5 << 0) + 36);
-            }
-
-            if(this.pointerDraw){
-                this.generateWorld();
-                this.STATE = 'game';
-                this.pointerDraw = false;
-            }
-
-
-        }
-
-        if(this.STATE == 'game'){
-            for (x = 0; x < this.world.length; x++) {
-                for (y = 0; y < this.world[x].length; y++) {
-                        if(this.world[x][y]> 0){
-                            sprite = this.sprites[this.spritesVariants * this.world[x][y] + (this.randomSpritesMask[x*y+x+y])];
-
-                            var step = 0;
-                            if(y<this.worldH-1){
-                                step = this.world[x][y+1] === 0 ? -1 : 0;
-                            }
-                            this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize+step);
-                        }else{
-                            sprite = this.sprites[this.spritesVariants * this.world[x][y] + (Math.random()*(this.spritesVariants))<<0];
-                            this.ctx.putImageData(sprite,x*this.spriteSize, y*this.spriteSize);
+        switch(this.state){
+            case 'intro':
+                this.gui.draw_intro();
+            break;
+            case 'game':
+                // render background terrain
+                if(this.layers[0].render){
+                    // render sea
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
+                            this.gfx.put_tile({
+                                id:6,x:x,y:y,
+                                layer: 0
+                            });
                         }
-
-
-                }
-            }
-
-            for (i = 0; i < this.tribes.length; i++) {
-                if(this.tribes[i]){
-
-                    this.tribes[i].renderMove(dTime);
-
-                    if(this.flag && this.tribes[i].following){
-                        this.ctx.beginPath();
-                        this.ctx.moveTo((this.tribes[i].renderPos.x+(this.spriteSize*0.5))<<0,(this.tribes[i].renderPos.y+(this.spriteSize*0.5))<<0);
-                        this.ctx.lineTo((this.flag.x*game.spriteSize+(this.spriteSize*0.5))<<0,(this.flag.y*game.spriteSize+(this.spriteSize*0.5))<<0);
-                        this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-                        this.ctx.stroke();
                     }
 
-                    this.ctx.putImageData(this.offTribeSpriteLive({
-                        x: this.tribes[i].renderPos.x<<0,
-                        y: this.tribes[i].renderPos.y<<0,
-                        colorHead: [0,0,0],
-                        colorBody: [73,60,43]
-                    }), (this.tribes[i].renderPos.x)<<0,(this.tribes[i].renderPos.y)<<0);
-
-                    /*this.ctx.beginPath();
-                    this.ctx.moveTo(this.tribes[i].renderPos.x*game.spriteSize,this.tribes[i].renderPos.y*game.spriteSize);
-                    this.ctx.lineTo(this.tribes[i].pos.x*game.spriteSize,this.tribes[i].pos.y*game.spriteSize - (this.tribes[i].energy/10)<<0);
-                    this.ctx.strokeStyle = '#be2633';
-                    this.ctx.stroke();*/
-
-
+                    // render island
+                    for (i = 0; i < this.world.islands.length; i++) {
+                        var island = this.world.islands[i];
+                        for (x = 0; x < island.data.length; x++) {
+                            for (y = 0; y < island.data[x].length; y++) {
+                                this.gfx.put_tile({
+                                    id:island.data[y][x],
+                                    x:island.pos.x+x,
+                                    y:island.pos.y+y,
+                                    layer: 0
+                                });
+                            }
+                        }
+                    }
+                    this.layers[0].render = false;
                 }
-            };
+                // render entities
+                if(this.layers[1].render){
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
 
-            if(this.flag){
-                this.ctx.putImageData(this.offFlagSpriteLive({
-                    x: this.flag.x*this.spriteSize,
-                    y: this.flag.y*this.spriteSize,
-                    colorA: [190,38,51],
-                    colorB: [73,60,43]
-                }), this.flag.x*this.spriteSize,this.flag.y*game.spriteSize);
-            }
-
-            this.drawFPS();
-            this.drawGUI();
+                        }
+                    }
+                    this.layers[1].render = false;
+                }
+                // render gui
+                this.gui.draw_fps();
+                this.gui.draw_logo({
+                    x:(this.world.width*0.5)<<0,
+                    y:2
+                });
+            break;
+            case 'game_over':
+                this.gui.draw_game_over();
+            break;
         }
 
+        this.gui.draw_pointer();
 
-        this.drawCursor();
-    }
+
+    },
+
+
+
+    /*
+    *   main loop
+    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+    loop: function(delta_time){
+        this.update(delta_time);
+        this.render(delta_time);
+    },
+
 };
+
+
+/*
+*
+*   init game/render loop
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 
 game.init();
 
 var time,
     fps = 0,
-    lastUpdate = (new Date)*1 - 1,
-    fpsFilter = 30;
+    last_update = (new Date)*1 - 1,
+    fps_filter = 30;
 
-(function animloop() {
-    requestAnimFrame(animloop);
+(function game_loop() {
+    requestAnimFrame(game_loop);
 
     var now = new Date().getTime(),
-        dTime = now - (time || now);
+        delta_time = now - (time || now);
     time = now;
 
-    var thisFrameFPS = 1000 / ((now=new Date) - lastUpdate);
-    fps += (thisFrameFPS - fps) / fpsFilter;
-    lastUpdate = now;
+    var temp_frame_fps = 1000 / ((now=new Date) - last_update);
+    fps += (temp_frame_fps - fps) / fps_filter;
+    last_update = now;
 
     game.fps = fps.toFixed(1);
-    game.draw(dTime);
-
+    game.loop(delta_time);
 })();
