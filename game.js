@@ -4,7 +4,7 @@
 *   P1X, Krzysztof Jankowski
 *   TRIBES rev2
 *
-*   abstract: game for the js13k compo
+*   abstract: game for the js13kGames compo
 *   created: 21-08-2014
 *   license: do what you want and dont bother me
 *
@@ -183,7 +183,7 @@ Gui.prototype.draw_intro = function(params){
         (game.screen.height*0.5 << 0)+32
     );
 
-    ctx.fillText('#JS13KGAME',
+    ctx.fillText('#JS13KGAMES',
         game.screen.width*0.5 << 0,
         (game.screen.height*0.5 << 0)+48
     );
@@ -359,19 +359,37 @@ var game = {
                 y: (this.world.height*0.5<<0)-3
             },
             data: [
-                [2, 0, 0, 1, 0, 3],
-                [0, 1,10,10, 0, 0],
-                [1, 0,10,10, 1, 0],
-                [0,10, 1,10,10, 1],
-                [0, 1, 0, 1,10, 0],
-                [4, 0, 1, 0, 0, 5]
+                [6, 2, 3, 2, 3, 7, 0, 0],
+                [3, 2,12,12,10, 2, 7, 0],
+                [8,10,12,12,11,10, 2, 7],
+                [0, 2,11,12,12, 3,10, 2],
+                [6,10, 3,12,10,11, 3, 9],
+                [2, 3, 2,11, 2, 2, 9, 0],
+                [8, 4, 5, 4, 5, 9, 0, 0]
             ]
         });
 
         this.world.entities.push({
+            sprite: 16,
             pos: {
                 x: (this.world.width*0.5<<0)-1,
                 y: (this.world.height*0.5<<0)+1
+            },
+        });
+
+        this.world.entities.push({
+            sprite: 17,
+            pos: {
+                x: (this.world.width*0.5<<0)+3,
+                y: (this.world.height*0.5<<0)-1
+            },
+        });
+
+        this.world.entities.push({
+            sprite: 18,
+            pos: {
+                x: (this.world.width*0.5<<0)-2,
+                y: (this.world.height*0.5<<0)+2
             },
         });
     },
@@ -436,13 +454,14 @@ var game = {
                 this.gui.draw_intro();
             break;
             case 'game':
-                // render background terrain
+
                 if(this.layers[0].render){
                     // render sea
                     for (x = 0; x < this.world.width; x++) {
                         for (y = 0; y < this.world.height; y++) {
                             this.gfx.put_tile({
-                                id:6,x:x,y:y,
+                                id:Math.random()<0.5 ? 0 : 1,
+                                x:x,y:y,
                                 layer: 0
                             });
                         }
@@ -450,18 +469,30 @@ var game = {
                     this.layers[0].render = false;
                 }
 
+                for (var i = 0; i < 32; i++) {
+                    this.gfx.put_tile({
+                        id:Math.random()<0.5 ? 0 : 1,
+                        x:(Math.random()*this.world.width)<<0,
+                        y:(Math.random()*this.world.height)<<0,
+                        layer: 0
+                    });
+                };
+
+
                 if(this.layers[1].render){
                     // render island
                     for (i = 0; i < this.world.islands.length; i++) {
                         var island = this.world.islands[i];
-                        for (x = 0; x < island.data.length; x++) {
-                            for (y = 0; y < island.data[x].length; y++) {
-                                this.gfx.put_tile({
-                                    id:island.data[y][x],
-                                    x:island.pos.x+x,
-                                    y:island.pos.y+y,
-                                    layer: 1
-                                });
+                        for (y = 0; y < island.data.length; y++) {
+                            for (x = 0; x < island.data[y].length; x++) {
+                                if(island.data[y][x] > 0){
+                                    this.gfx.put_tile({
+                                        id:island.data[y][x],
+                                        x:island.pos.x+x,
+                                        y:island.pos.y+y,
+                                        layer: 1
+                                    });
+                                }
                             }
                         }
                     }
@@ -473,7 +504,7 @@ var game = {
                     for(i in this.world.entities){
                         var entity = this.world.entities[i];
                         this.gfx.put_tile({
-                            id:8,
+                            id:entity.sprite,
                             x:entity.pos.x,
                             y:entity.pos.y,
                             layer: 2
