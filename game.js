@@ -136,7 +136,6 @@ var Gui = function(){};
 Gui.prototype.init = function(params){
     this.layer = params.layer;
     this.bubbles = [];
-    this.conversation_time = 30;
 };
 Gui.prototype.clear = function(){
     game.layers[this.layer].ctx.clearRect(
@@ -301,7 +300,7 @@ Gui.prototype.conversation = function(params){
                 y:params.pos.y
             },
             delay: i===0 ? params.delay || false : false,
-            time: this.conversation_time
+            time: game.settings.conversation_time
         });
     };
 };
@@ -425,6 +424,11 @@ var game = {
     },
     state: 'loading',
     timer: 0,
+
+    settings:{
+        water_animations: 36,
+        conversation_time: 30
+    },
 
     /*
     *   init the engine
@@ -630,7 +634,7 @@ var game = {
                     this.layers[0].render = false;
                 }
 
-                for (var i = 0; i < 32; i++) {
+                for (var i = 0; i < this.settings.water_animations; i++) {
                     this.gfx.put_tile({
                         id:Math.random()<0.5 ? 0 : 1,
                         x:(Math.random()*this.world.width)<<0,
