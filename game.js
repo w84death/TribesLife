@@ -135,6 +135,8 @@ Gfx.prototype.put_tile = function(params){
 var Gui = function(){};
 Gui.prototype.init = function(params){
     this.layer = params.layer;
+    this.bubbles = [];
+    this.conversation_time = 30;
 };
 Gui.prototype.clear = function(){
     game.layers[this.layer].ctx.clearRect(
@@ -225,12 +227,108 @@ Gui.prototype.draw_pointer = function(){
     var x = (game.pointer.pos.x / game.screen.scale) << 0,
         y = (game.pointer.pos.y / game.screen.scale) << 0;
 
-    game.layers[this.layer].ctx.drawImage(game.gfx.sprites.pointer,
-        x,
-        y
+    game.layers[this.layer].ctx.drawImage(
+        game.gfx.sprites.pointer,
+        game.pointer.enable? 8 : 0, // x cut
+        0, // y cut
+        8,8,x,y,8,8 // cut size, position, sprite size
     );
 };
+Gui.prototype.draw_message = function(params){
+    var ctx = game.layers[this.layer].ctx,
+        tile = 0, corner = {}, max_len = 0, len = 0,
+        width, height, i,x,y;
 
+    for (i = 0; i < params.msg.length; i++) {
+        len = params.msg[i].length;
+        if(len > max_len) max_len = len;
+    };
+
+    width = (((max_len/7.5)*4.8)<<0 )+1;
+    height = i+1;
+    if(width<2) width = 2;
+
+    corner = {
+        x: params.x - width + 1,
+        y: params.y - height + 1
+    };
+
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
+
+            if(y===0){
+                if(x===0) tile = 20;
+                if(x===width-1) tile = 22;
+                if(x>0 && x<width-1) tile = 21;
+            }
+            if(height > 2 && y>0){
+                if(x===0) tile = 23;
+                if(x===width-1) tile = 25;
+                if(x>0 && x<width-1) tile = 24;
+            }
+            if(y===height-1){
+                if(x===0) tile = 26;
+                if(x===width-1) tile = 28;
+                if(x>0 && x<width-1) tile = 27;
+            }
+
+            game.gfx.put_tile({
+                layer: this.layer,
+                id:tile,
+                x: corner.x+x,
+                y: corner.y+y
+            })
+        }
+    };
+
+    ctx.fillStyle = '#000';
+    ctx.font = "900 8px 'Source Code Pro', monospace,serif";
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    for (var i = 0; i < params.msg.length; i++) {
+        ctx.fillText(params.msg[i],
+            corner.x*game.world.sprite_size + 3,
+            (corner.y+i)*game.world.sprite_size + 2
+        );
+    };
+};
+Gui.prototype.conversation = function(params){
+    for (var i = 0; i < params.bubbles.length; i++) {
+        this.bubbles.push({
+            msg: params.bubbles[i],
+            pos: {
+                x:params.pos.x,
+                y:params.pos.y
+            },
+            delay: i===0 ? params.delay || false : false,
+            time: this.conversation_time
+        });
+    };
+};
+
+Gui.prototype.draw_conversation = function(){
+    var msg;
+
+    if(this.bubbles.length > 0){
+        bubble = this.bubbles[0];
+        if(bubble.delay && bubble.delay < 0){
+            if(bubble.time < 0){
+                this.draw_message({
+                    msg: bubble.msg,
+                    x: bubble.pos.x,
+                    y: bubble.pos.y
+                });
+                if(game.pointer.enable){
+                    this.bubbles.splice(0,1);
+                }
+            }else{
+                bubble.time--;
+            }
+        }else{
+            bubble.delay--;
+        }
+    }
+};
 /*
 *
 *   input function
@@ -278,6 +376,16 @@ Input.prototype.track_pointer = function(e){
         //game.makeNewLand(x,y, event.which == 1 ? 1 : 0 );
     }
 };
+
+
+/*
+*
+*   entities
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+var Entity = function(){};
+
 
 /*
 *
@@ -360,9 +468,9 @@ var game = {
             },
             data: [
                 [6, 2, 3, 2, 3, 7, 0, 0],
-                [3, 2,12,12,10, 2, 7, 0],
+                [3, 2,12,13,10, 2, 7, 0],
                 [8,10,12,12,11,10, 2, 7],
-                [0, 2,11,12,12, 3,10, 2],
+                [0, 2,11,13,12, 3,10, 2],
                 [6,10, 3,12,10,11, 3, 9],
                 [2, 3, 2,11, 2, 2, 9, 0],
                 [8, 4, 5, 4, 5, 9, 0, 0]
@@ -370,7 +478,7 @@ var game = {
         });
 
         this.world.entities.push({
-            sprite: 16,
+            sprite: 17,
             pos: {
                 x: (this.world.width*0.5<<0)-1,
                 y: (this.world.height*0.5<<0)+1
@@ -378,7 +486,7 @@ var game = {
         });
 
         this.world.entities.push({
-            sprite: 17,
+            sprite: 15,
             pos: {
                 x: (this.world.width*0.5<<0)+3,
                 y: (this.world.height*0.5<<0)-1
@@ -390,6 +498,22 @@ var game = {
             pos: {
                 x: (this.world.width*0.5<<0)-2,
                 y: (this.world.height*0.5<<0)+2
+            },
+        });
+
+        this.world.entities.push({
+            sprite: 14,
+            pos: {
+                x: (this.world.width*0.5<<0)+1,
+                y: (this.world.height*0.5<<0)-3
+            },
+        });
+
+        this.world.entities.push({
+            sprite: 16,
+            pos: {
+                x: (this.world.width*0.5<<0)-2,
+                y: (this.world.height*0.5<<0)-2
             },
         });
     },
@@ -410,6 +534,43 @@ var game = {
         this.layers[2].render = true;
         this.timer = 0;
         //this.gfx.draw_tileset();
+
+        this.gui.conversation({
+            bubbles: [
+
+                ['Hello, there!'],
+
+                ['Welcome to our',
+                'little island.'],
+
+            ],
+            pos: {
+                x: ((this.world.width*0.5)<<0)-2,
+                y: ((this.world.height*0.5)<<0)-3
+            },
+            delay: 150
+        });
+
+
+        this.gui.conversation({
+            bubbles: [
+
+                ['We are low in',
+                'food supply..'],
+
+                ['We shoud go',
+                'for hunting!'],
+
+                ['Lead us to',
+                'the animals.']
+            ],
+            pos: {
+                x: ((this.world.width*0.5)<<0)-1,
+                y: ((this.world.height*0.5)<<0)
+            },
+            delay: 80
+        });
+
     },
 
     update: function(delta_time){
@@ -517,9 +678,10 @@ var game = {
                 // render gui
                 this.gui.draw_fps();
                 this.gui.draw_logo({
-                    x:(this.world.width*0.5)<<0,
-                    y:2
+                    x:4,
+                    y:this.world.height-2
                 });
+                this.gui.draw_conversation();
             break;
             case 'game_over':
                 this.gui.draw_game_over();
