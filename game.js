@@ -5,6 +5,7 @@
 *   TRIBES rev2
 *
 *   abstract: game for the js13kGames compo
+*   engine: P1X Engine V4
 *   created: 21-08-2014
 *   license: do what you want and dont bother me
 *
