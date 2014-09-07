@@ -2,11 +2,11 @@
 *
 *
 *   P1X, Krzysztof Jankowski
-*   TRIBES rev2
+*   Tribes Life
 *
-*   abstract: game for the js13kGames compo
+*   abstract: Simple game for the js3kGames compo
 *   engine: P1X Engine V4
-*   created: 21-08-2014
+*   created: 07-09-2014
 *   license: do what you want and dont bother me
 *
 *   webpage: http://p1x.in
@@ -15,387 +15,204 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-
 /*
 *
-*   request animation, force 60fps rendering
+*   custom GUI draw functions
 *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-window.requestAnimFrame = (function(){
-  return  window.requestAnimationFrame       ||
-          window.webkitRequestAnimationFrame ||
-          window.mozRequestAnimationFrame    ||
-          window.oRequestAnimationFrame      ||
-          window.msRequestAnimationFrame     ||
-          function( callback ){
-            window.setTimeout(callback, 1000 / 60);
-          };
-})();
-
-
-/*
-*
-*   graphics functions
-*
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-var Gfx = function(){
-    this.layers = [];
-    this.screen = {
-        width: null,
-        height: null,
-        scale: 4,
-        sprite_size: 8,
-    };
-    this.screen.width = (window.innerWidth/this.screen.scale)<<0;
-    this.screen.height = (window.innerHeight/this.screen.scale)<<0;
-};
-Gfx.prototype.init = function(params){
-    this.loaded = 0;
-    this.sprites = {
-        logo: new Image(),
-        pointer: new Image(),
-        tileset: new Image()
-    };
-    this.sprites.logo.src = 'sprites/logo.png';
-    this.sprites.pointer.src = 'sprites/pointer.png';
-    this.sprites.tileset.src = 'sprites/tileset.png';
-
-    for (var key in this.sprites) {
-        this.sprites[key].onload = function(){
-            game.gfx.loaded++;
-        };
-    }
-
-    for (var i = 0; i < params.layers; i++) {
-        var canvas = document.createElement('canvas');
-        canvas.width = this.screen.width;
-        canvas.height = this.screen.height;
-        var ctx = canvas.getContext("2d");
-        this.layers.push({
-            canvas: canvas,
-            ctx: ctx,
-            render: false
-        });
-        canvas.style.webkitTransform = ' scale('+this.screen.scale+')';
-        document.getElementById('game').appendChild(canvas);
-    };
-};
-Gfx.prototype.load = function(){
-    var size = 0, key;
-    for (key in this.sprites) {
-        if (this.sprites.hasOwnProperty(key)) size++;
-    }
-    if(this.loaded >= size){
-        game.gfx.init_tileset();
-        return true;
-    }
-    return false;
-};
-Gfx.prototype.clear = function(layer){
-    this.layers[layer].ctx.clearRect(
-        0, 0,
-        this.screen.width, this.screen.height
-    );
-};
-Gfx.prototype.init_tileset = function(){
-    var canvas = document.createElement('canvas');
-    canvas.width = this.sprites.tileset.width;
-    canvas.height = this.sprites.tileset.height;
-    var ctx = canvas.getContext("2d");
-
-    ctx.drawImage(this.sprites.tileset,0,0);
-
-    this.tileset = [];
-    for (var y = 0; y < canvas.height/this.screen.sprite_size; y++) {
-        for (var x = 0; x < canvas.width/this.screen.sprite_size; x++) {
-            this.tileset.push(
-                ctx.getImageData(
-                    game.gfx.screen.sprite_size * x,
-                    game.gfx.screen.sprite_size * y,
-                    game.gfx.screen.sprite_size,
-                    game.gfx.screen.sprite_size
-                )
-            );
-        }
-    }
-};
-Gfx.prototype.draw_tileset = function(){
-    for (var i = 0; i < this.tileset.length; i++) {
-        this.put_tile({
-            id:i, x:i, y:0, layer:1
-        });
-        this.gfx.layers[1].render = true;
-    };
-};
-Gfx.prototype.put_tile = function(params){
-    this.layers[params.layer].ctx.putImageData(
-        this.tileset[params.id],
-        params.x*this.screen.sprite_size,
-        params.y*this.screen.sprite_size
-    );
-};
-
-/*
-*
-*   gui functions
-*
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-var Gui = function(){};
-Gui.prototype.init = function(params){
-    this.layer = params.layer;
-    this.bubbles = [];
-};
-Gui.prototype.clear = function(){
-    game.gfx.layers[this.layer].ctx.clearRect(
-        0, 0,
-        game.gfx.screen.width, game.gfx.screen.height
-    );
-};
-Gui.prototype.draw_logo = function(params){
-    game.gfx.layers[this.layer].ctx.drawImage(
-        game.gfx.sprites.logo,
-        (params.x*game.gfx.screen.sprite_size)-(game.gfx.sprites.logo.width*0.5),
-        (params.y*game.gfx.screen.sprite_size)-(game.gfx.sprites.logo.height*0.5)
-    );
-};
 Gui.prototype.draw_intro = function(params){
-    var ctx = game.gfx.layers[this.layer].ctx;
+    var ctx = game.gfx.layers[this.layer].ctx,
+        _w = game.gfx.screen.width*game.gfx.screen.scale,
+        _h = game.gfx.screen.height*game.gfx.screen.scale;
 
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.font = "900 11px 'Source Code Pro', monospace,serif";
+    ctx.font = "900 "+(4*game.gfx.screen.scale)+"px 'Source Code Pro', monospace,serif";
     ctx.strokeStyle = '#fff';
 
     ctx.fillText('P1X PRESENTS',
-        game.gfx.screen.width*0.5 << 0,
-        (game.gfx.screen.height*0.5 << 0) - 36
+        _w*0.5 << 0,
+        (_h*0.5 << 0) - 112
     );
 
-    ctx.drawImage(game.gfx.sprites.logo,
-        (game.gfx.screen.width*0.5 << 0)-(game.gfx.sprites.logo.width*0.5),
-        ((game.gfx.screen.height*0.5 << 0)-(game.gfx.sprites.logo.height*0.5))-20
-    );
+    this.draw_image({
+        name: 'logo',
+        x:(game.world.width*0.5 << 0),
+        y:(game.world.height*0.5 << 0)-2,
+        center: true
+    });
 
     ctx.beginPath();
-    ctx.moveTo(24,(game.gfx.screen.height*0.5 << 0));
-    ctx.lineTo(game.gfx.screen.width-24,(game.gfx.screen.height*0.5 << 0));
+    ctx.moveTo(24,(_h*0.5 << 0)-12);
+    ctx.lineTo(_w-24,(_h*0.5 << 0)-12);
     ctx.stroke();
 
     ctx.fillText('8X8 SPRITES; 16 COLOUR PALETTE',
-        game.gfx.screen.width*0.5 << 0,
-        (game.gfx.screen.height*0.5 << 0)+18
+        (_w*0.5 << 0),
+        (_h*0.5 << 0)+18
     );
 
     game.gfx.layers[this.layer].ctx.fillText('P1X ENGINE V4; HTTP://P1X.IN',
-        game.gfx.screen.width*0.5 << 0,
-        (game.gfx.screen.height*0.5 << 0)+32
+        (_w*0.5 << 0),
+        (_h*0.5 << 0)+32
     );
 
     ctx.fillText('@W84DEATH',
-        game.gfx.screen.width*0.5 << 0,
-        (game.gfx.screen.height*0.5 << 0)+48
+        (_w*0.5 << 0),
+        (_h*0.5 << 0)+48
     );
 
     ctx.beginPath();
-    ctx.moveTo(24,(game.gfx.screen.height*0.5 << 0) + 56);
-    ctx.lineTo(game.gfx.screen.width-24,(game.gfx.screen.height*0.5 << 0) + 56);
+    ctx.moveTo(24,(_h*0.5 << 0)+ 56);
+    ctx.lineTo(_w-24,(_h*0.5 << 0)+ 56);
     ctx.stroke();
 
     if(game.timer % 2 == 1){
         ctx.fillText('CLICK TO START',
-            game.gfx.screen.width*0.5 << 0,
-            (game.gfx.screen.height*0.5 << 0) + 74
+            _w*0.5 << 0,
+            (_h*0.5 << 0) + 84
         );
     }
 };
-Gui.prototype.draw_fps = function(){
-    var ctx = game.gfx.layers[this.layer].ctx;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(
-        game.gfx.screen.width-(7*game.gfx.screen.sprite_size),
-        game.gfx.screen.height-(2*game.gfx.screen.sprite_size),
-        game.gfx.screen.sprite_size*6,
-        game.gfx.screen.sprite_size);
-    ctx.fillStyle = '#fff';
-    ctx.font = "900 9px 'Source Code Pro', monospace,serif";
-    ctx.textBaseline = 'bottom';
-    ctx.textAlign = 'right';
-    ctx.fillText('FPS '+game.fps,
-        game.gfx.screen.width-game.gfx.screen.sprite_size-2,
-        game.gfx.screen.height-game.gfx.screen.sprite_size+1
-    );
+
+/*
+*
+*   game virtual world
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+var World = function(){
+    width = 0;
+    height = 0;
+    data = [];
+    entities = [];
 };
-Gui.prototype.draw_pointer = function(){
-    var x = (game.input.pointer.pos.x / game.gfx.screen.scale) << 0,
-        y = (game.input.pointer.pos.y / game.gfx.screen.scale) << 0;
+World.prototype.init = function(params){
+    var x,y;
 
-    game.gfx.layers[this.layer].ctx.drawImage(
-        game.gfx.sprites.pointer,
-        game.input.pointer.enable? 8 : 0, // x cut
-        0, // y cut
-        8,8,x,y,8,8 // cut size, position, sprite size
-    );
+    this.width = params.width;
+    this.height = params.height;
+    this.data = [this.width];
+    for (x = 0; x < this.width; x++) {
+        this.data[x] = [this.height]
+        for (y = 0; y < this.height; y++) {
+            this.data[x][y] = {
+                type: 0,
+                sprite: 0,
+                growing: 0
+            };
+        };
+    };
 };
-Gui.prototype.draw_message = function(params){
-    var ctx = game.gfx.layers[this.layer].ctx,
-        tile = 0, corner = {}, max_len = 0, len = 0,
-        width, height, i,x,y;
+World.prototype.generate_new_island = function(params){
+    var i,e, islands = [], x,y;
 
-    for (i = 0; i < params.msg.length; i++) {
-        len = params.msg[i].length;
-        if(len > max_len) max_len = len;
-    };
+    x = 4 + (Math.random()*(this.width*0.5 - 4))<<0;
+    y = 4 + (Math.random()*(this.height*0.5 - 4))<<0;
+    this.data[x][y].type = 1;
 
-    width = (((max_len/7.5)*4.8)<<0 )+1;
-    height = i+1;
-    if(width<2) width = 2;
+    x = this.width*0.5 + (Math.random()*(this.width*0.5 - 4))<<0;
+    y = 4 + (Math.random()*(this.height*0.5 - 4))<<0;
+    this.data[x][y].type = 1;
 
-    corner = {
-        x: params.x - width + 1,
-        y: params.y - height + 1
-    };
+    x = 4 + (Math.random()*(this.width*0.5 - 4))<<0;
+    y = this.height*0.5 + (Math.random()*(this.height*0.5 - 4))<<0;
+    this.data[x][y].type = 1;
 
-    for (x = 0; x < width; x++) {
-        for (y = 0; y < height; y++) {
+    x = this.width*0.5 + (Math.random()*(this.width*0.5 - 4))<<0;
+    y = this.height*0.5 + (Math.random()*(this.height*0.5 - 4))<<0;
+    this.data[x][y].type = 1;
 
-            if(y===0){
-                if(x===0) tile = 20;
-                if(x===width-1) tile = 22;
-                if(x>0 && x<width-1) tile = 21;
+
+    for (x = 4; x < this.width-4; x++) {
+        for (y = 4; y < this.height-4; y++) {
+            if(this.data[x][y].type == 1 && Math.random() < params.expand){
+                this.data[x-1][y].type = 1;
+                this.data[x][y-1].type = 1;
+                this.data[x+1][y].type = 1;
+                this.data[x][y+1].type = 1;
             }
-            if(height > 2 && y>0){
-                if(x===0) tile = 23;
-                if(x===width-1) tile = 25;
-                if(x>0 && x<width-1) tile = 24;
-            }
-            if(y===height-1){
-                if(x===0) tile = 26;
-                if(x===width-1) tile = 28;
-                if(x>0 && x<width-1) tile = 27;
-            }
-
-            game.gfx.put_tile({
-                layer: this.layer,
-                id:tile,
-                x: corner.x+x,
-                y: corner.y+y
-            })
-        }
-    };
-
-    ctx.fillStyle = '#000';
-    ctx.font = "900 8px 'Source Code Pro', monospace,serif";
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-    for (var i = 0; i < params.msg.length; i++) {
-        ctx.fillText(params.msg[i],
-            corner.x*game.gfx.screen.sprite_size + 3,
-            (corner.y+i)*game.gfx.screen.sprite_size + 2
-        );
+        };
     };
 };
-Gui.prototype.conversation = function(params){
-    for (var i = 0; i < params.bubbles.length; i++) {
-        this.bubbles.push({
-            msg: params.bubbles[i],
-            pos: {
-                x:params.pos.x,
-                y:params.pos.y
-            },
-            delay: i===0 ? params.delay || false : false,
-            time: game.settings.conversation_time
-        });
-    };
+World.prototype.binary_neigbours = function(x,y,t){
+    var bn = 0;
+    if(this.data[x-1][y-1].type == t) bn+= 1;
+    if(this.data[x][y-1].type == t) bn+= 2;
+    if(this.data[x+1][y-1].type == t) bn+= 4;
+    if(this.data[x+1][y].type == t) bn+= 8;
+    if(this.data[x+1][y+1].type == t) bn+= 16;
+    if(this.data[x][y+1].type == t) bn+= 32;
+    if(this.data[x-1][y+1].type == t) bn+= 64;
+    if(this.data[x-1][y].type == t) bn+= 128;
+    return bn;
 };
-Gui.prototype.draw_conversation = function(){
-    var msg;
+World.prototype.generate_sprites = function(){
+    var bin;
 
-    if(this.bubbles.length > 0){
-        bubble = this.bubbles[0];
-        if(bubble.delay && bubble.delay < 0){
-            if(bubble.time < 0){
-                this.draw_message({
-                    msg: bubble.msg,
-                    x: bubble.pos.x,
-                    y: bubble.pos.y
-                });
-                if(game.input.pointer.enable){
-                    this.bubbles.splice(0,1);
+    for (x = 1; x < this.width-1; x++) {
+        for (y = 1; y < this.height-1; y++) {
+            if(this.data[x][y].type == 1){
+                bin = this.binary_neigbours(x,y,1);
+                if(
+                    bin == 60 || bin == 120 || bin == 56 || bin == 124 ||
+                    bin == 40 || bin == 108 || bin == 44 || bin == 104
+                ){
+                    this.data[x][y].sprite = 6;
+                }else
+                if(
+                    bin == 14 || bin == 15 || bin == 30 || bin == 31 ||
+                    bin == 10
+                ){
+                    this.data[x][y].sprite = 8;
+                }else
+                if(
+                    bin == 240 || bin == 241 || bin == 224 || bin == 225 ||
+                    bin == 160 || bin == 176 || bin == 177
+
+                ){
+                    this.data[x][y].sprite = 7;
+                }else
+                if(
+                    bin == 198 || bin == 199 || bin == 135 || bin == 195 ||
+                    bin == 131 || bin == 130 || bin == 134 || bin == 194
+                ){
+                    this.data[x][y].sprite = 9;
+                }else
+                if(
+                    bin == 112 || bin == 48 || bin == 96 || bin == 32
+                ){
+                    this.data[x][y].sprite = 12;
+                }else
+                if(
+                    bin == 6 || bin == 7 || bin == 3 || bin == 2
+                ){
+                    this.data[x][y].sprite = 13;
+                }else
+                if(
+                    bin == 28 || bin == 8 || bin == 24 || bin == 12 ||
+                    bin == 29
+                ){
+                    this.data[x][y].sprite = 14;
+                }else
+                if(
+                    bin == 128 || bin == 129 || bin == 192 || bin == 193 ||
+                    bin == 209
+                ){
+                    this.data[x][y].sprite = 15;
+                }else
+                if(
+                    bin == 143 || bin == 207 || bin == 159 || bin == 223
+                ){
+                    this.data[x][y].sprite = (x%2==0)? 4 : 5;
+                }else{
+                    this.data[x][y].sprite = 2;
                 }
-            }else{
-                bubble.time--;
             }
-        }else{
-            bubble.delay--;
-        }
-    }
-};
-
-/*
-*
-*   input function
-*
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-var Input = function(){
-    this.pointer = {
-        enable: false,
-        pos: {
-            x: null,
-            y: null
-        }
+        };
     };
 };
-Input.prototype.init = function(){
-    document.body.addEventListener('mousedown', this.enable_pointer, false);
-    document.body.addEventListener('mouseup', this.disable_pointer, false);
-    document.body.addEventListener('mousemove', this.track_pointer, false);
-    document.body.addEventListener("contextmenu", function(e){
-        e.preventDefault();
-    }, false);
-};
-Input.prototype.enable_pointer = function(e){
-    e.preventDefault();
-    var x,y;
-    if(e.touches){
-        x = e.touches[0].pageX;
-        y = e.touches[0].pageY;
-    }else{
-        x = e.pageX;
-        y = e.pageY;
-    }
-    game.input.pointer.enable = true;
-};
-Input.prototype.disable_pointer = function(){
-    game.input.pointer.enable = false;
-};
-Input.prototype.track_pointer = function(e){
-    e.preventDefault();
-    var x,y;
-    if(e.touches){
-        x = e.touches[0].pageX;
-        y = e.touches[0].pageY;
-    }else{
-        x = e.pageX;
-        y = e.pageY;
-    }
-    game.input.pointer.pos.x = x;
-    game.input.pointer.pos.y = y;
-};
-
-/*
-*
-*   entities
-*
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-var Entity = function(){};
-
-
 /*
 *
 *   main game mechanics
@@ -405,23 +222,22 @@ var Entity = function(){};
 
 var game = {
 
-    gfx: new Gfx(),
+    gfx: new Gfx({min_w:512, min_h:384, max_w:1024, max_h:768}),
     gui: new Gui(),
     input: new Input(),
+    moog: new Moog(),
+    messages: new Messages(),
+    world: new World(),
 
     fps: 0,
-    world: {
-        width: null,
-        height: null,
-        islands: [],
-        entities: []
-    },
     state: 'loading',
     timer: 0,
 
     settings:{
-        water_animations: 36,
-        conversation_time: 30
+        debug_world: false,
+        game_clock: 500,
+        conversation_time: 30,
+        water_animations: 36
     },
 
     /*
@@ -429,12 +245,8 @@ var game = {
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     init: function(){
-        // game world size (for now as big as screen)
-        this.world.width = (this.gfx.screen.width/this.gfx.screen.sprite_size)<<0;
-        this.world.height = (this.gfx.screen.height/this.gfx.screen.sprite_size)<<0;
-
         // init game timer
-        window.setInterval(game.inc_timer,500);
+        window.setInterval(game.inc_timer,game.settings.game_clock);
 
         // graphics init
         this.gfx.init({
@@ -444,72 +256,31 @@ var game = {
         // gui init
         this.gui.init({
             layer: 3
-        })
+        });
+
+        // messages init
+        this.messages.init({
+            layer: 3
+        });
 
         // mouse events
         this.input.init();
-    },
 
-    /*
-    *   procedural island generation
-    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-    generate_island: function(params){
-        this.world.islands.push({
-            pos: {
-                x: (this.world.width*0.5<<0)-3,
-                y: (this.world.height*0.5<<0)-3
-            },
-            data: [
-                [6, 2, 3, 2, 3, 7, 0, 0],
-                [3, 2,12,13,10, 2, 7, 0],
-                [8,10,12,12,11,10, 2, 7],
-                [0, 2,11,13,12, 3,10, 2],
-                [6,10, 3,12,10,11, 3, 9],
-                [2, 3, 2,11, 2, 2, 9, 0],
-                [8, 4, 5, 4, 5, 9, 0, 0]
-            ]
+        // play some sound
+        this.moog.play({
+            freq: 5000,
+            attack: 80,
+            decay: 400,
+            oscilator: 3,
+            vol: 0.2
         });
 
-        this.world.entities.push({
-            sprite: 17,
-            pos: {
-                x: (this.world.width*0.5<<0)-1,
-                y: (this.world.height*0.5<<0)+1
-            },
+        this.world.init({
+            width: (game.gfx.screen.width/game.gfx.screen.sprite_size)<<0,
+            height: (game.gfx.screen.height/game.gfx.screen.sprite_size)<<0
         });
 
-        this.world.entities.push({
-            sprite: 15,
-            pos: {
-                x: (this.world.width*0.5<<0)+3,
-                y: (this.world.height*0.5<<0)-1
-            },
-        });
-
-        this.world.entities.push({
-            sprite: 18,
-            pos: {
-                x: (this.world.width*0.5<<0)-2,
-                y: (this.world.height*0.5<<0)+2
-            },
-        });
-
-        this.world.entities.push({
-            sprite: 14,
-            pos: {
-                x: (this.world.width*0.5<<0)+1,
-                y: (this.world.height*0.5<<0)-3
-            },
-        });
-
-        this.world.entities.push({
-            sprite: 16,
-            pos: {
-                x: (this.world.width*0.5<<0)-2,
-                y: (this.world.height*0.5<<0)-2
-            },
-        });
+        game_loop();
     },
 
     /*
@@ -521,50 +292,57 @@ var game = {
     },
 
     new_game: function(){
-        this.input.pointer.enable = false;
-        this.generate_island();
-        this.gfx.layers[0].render = true;
-        this.gfx.layers[1].render = true;
-        this.gfx.layers[2].render = true;
-        this.timer = 0;
-        //this.gfx.draw_tileset();
-
-        this.gui.conversation({
-            bubbles: [
-
-                ['Hello, there!'],
-
-                ['Welcome to our',
-                'little island.'],
-
-            ],
-            pos: {
-                x: ((this.world.width*0.5)<<0)-2,
-                y: ((this.world.height*0.5)<<0)-3
-            },
-            delay: 150
+        /*
+        this.world.generate_new_island({
+            trees: 0.5,
+            islands: 4,
+            expand: 0.8,
         });
+        this.world.generate_sprites();
+        */
+    },
 
+    user_select_on_screen: function(){
+        var px = (this.input.pointer.pos.x / this.gfx.screen.scale / this.gfx.screen.sprite_size )<<0,
+            py = (this.input.pointer.pos.y / this.gfx.screen.scale / this.gfx.screen.sprite_size ) <<0;
+        if(
+            px > 0 && py > 0 &&
+            px < this.world.width-1 && py < this.world.height-1
+        ){
+            this.world.data[px][py].type = 1;
+            this.world.generate_sprites();
+            this.gfx.layers[1].render = true;
+        }
+    },
 
-        this.gui.conversation({
-            bubbles: [
+    user_draw_on_screen: function(){
+        var px,py;
 
-                ['We are low in',
-                'food supply..'],
+        if(this.input.pointer.enable){
+            px = (this.input.pointer.pos.x / this.gfx.screen.scale / this.gfx.screen.sprite_size )<<0;
+            py = (this.input.pointer.pos.y / this.gfx.screen.scale / this.gfx.screen.sprite_size ) <<0;
+            if(
+                px > 0 && py > 0 &&
+                px < this.world.width-1 && py < this.world.height-1
+            ){
+                this.world.data[px][py].type = 1;
+                this.world.generate_sprites();
+                this.gfx.layers[1].render = true;
+            }
+        }
+    },
 
-                ['We shoud go',
-                'for hunting!'],
-
-                ['Lead us to',
-                'the animals.']
-            ],
-            pos: {
-                x: ((this.world.width*0.5)<<0)-1,
-                y: ((this.world.height*0.5)<<0)
-            },
-            delay: 80
-        });
-
+    debug_binary_neighbors: function(x,y){
+        var ctx = game.gfx.layers[2].ctx,
+        xs = x*game.gfx.screen.scale*game.gfx.screen.sprite_size + (game.gfx.screen.sprite_size*0.5)*game.gfx.screen.scale,
+        ys = y*game.gfx.screen.scale*game.gfx.screen.sprite_size + (game.gfx.screen.sprite_size*0.5)*game.gfx.screen.scale;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000';
+        ctx.font = "900 "+(3*game.gfx.screen.scale)+"px 'Source Code Pro', monospace,serif";
+        ctx.fillText(this.world.binary_neigbours(x,y,1),
+            xs,ys
+        );
     },
 
     update: function(delta_time){
@@ -572,12 +350,15 @@ var game = {
         switch(this.state){
             case 'loading':
                 if(this.gfx.load()){
+                    this.gfx.layers[0].render = true;
                     this.state = 'intro';
                 }
             break;
             case 'intro':
                 if(this.input.pointer.enable){
                     this.new_game();
+                    this.gfx.layers[0].render = true;
+                    this.gfx.layers[1].render = true;
                     this.state = 'game';
                 }
             break;
@@ -596,97 +377,91 @@ var game = {
 
     },
 
-    /*
-    *   render game graphics
-    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-    render: function(delta_time){
+     render: function(delta_time){
         this.gui.clear();
         var i,x,y;
 
         switch(this.state){
-            case 'intro':
-                this.gui.draw_intro();
+            case 'loading':
             break;
-            case 'game':
-
+            case 'intro':
                 if(this.gfx.layers[0].render){
-                    // render sea
                     for (x = 0; x < this.world.width; x++) {
                         for (y = 0; y < this.world.height; y++) {
                             this.gfx.put_tile({
-                                id:Math.random()<0.5 ? 0 : 1,
-                                x:x,y:y,
-                                layer: 0
+                                layer:0,
+                                id:29,
+                                x:x,y:y
                             });
-                        }
-                    }
+                        };
+                    };
+                    this.gfx.layers[0].render = false;
+                }
+                this.gui.draw_intro();
+            break;
+            case 'game':
+                // WATER
+                if(this.gfx.layers[0].render){
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
+                            this.gfx.put_tile({
+                                layer:0,
+                                id:Math.random()<0.5 ? 0 : 1,
+                                x:x,y:y
+                            });
+                        };
+                    };
                     this.gfx.layers[0].render = false;
                 }
 
-                for (var i = 0; i < this.settings.water_animations; i++) {
+                // WATER ANIMATIONS
+                for (i = 0; i < this.settings.water_animations; i++) {
                     this.gfx.put_tile({
+                        layer: 0,
                         id:Math.random()<0.5 ? 0 : 1,
                         x:(Math.random()*this.world.width)<<0,
-                        y:(Math.random()*this.world.height)<<0,
-                        layer: 0
+                        y:(Math.random()*this.world.height)<<0
                     });
                 };
 
-
+                // ISLANDS
                 if(this.gfx.layers[1].render){
-                    // render island
-                    for (i = 0; i < this.world.islands.length; i++) {
-                        var island = this.world.islands[i];
-                        for (y = 0; y < island.data.length; y++) {
-                            for (x = 0; x < island.data[y].length; x++) {
-                                if(island.data[y][x] > 0){
-                                    this.gfx.put_tile({
-                                        id:island.data[y][x],
-                                        x:island.pos.x+x,
-                                        y:island.pos.y+y,
-                                        layer: 1
-                                    });
-                                }
+                    this.gfx.clear(1);
+                    if(this.settings.debug_world) this.gfx.clear(2);
+                    for (x = 0; x < this.world.width; x++) {
+                        for (y = 0; y < this.world.height; y++) {
+                            if(this.world.data[x][y].type > 0){
+                                this.gfx.put_tile({
+                                    layer:1,
+                                    id:this.world.data[x][y].sprite,
+                                    x:x,y:y
+                                });
+                                if(this.settings.debug_world) this.debug_binary_neighbors(x,y);
                             }
-                        }
-                    }
+                        };
+                    };
                     this.gfx.layers[1].render = false;
                 }
 
-                // render entities
+                // ENTITIES
                 if(this.gfx.layers[2].render){
-                    for(i in this.world.entities){
-                        var entity = this.world.entities[i];
-                        this.gfx.put_tile({
-                            id:entity.sprite,
-                            x:entity.pos.x,
-                            y:entity.pos.y,
-                            layer: 2
-                        });
-
-                    }
+                    // ...
                     this.gfx.layers[2].render = false;
                 }
 
-                // render gui
                 this.gui.draw_fps();
-                this.gui.draw_logo({
-                    x:4,
-                    y:this.world.height-2
+                this.gui.draw_image({
+                    name: 'logo',
+                    x:1,
+                    y:this.world.height-3
                 });
-                this.gui.draw_conversation();
             break;
             case 'game_over':
-                this.gui.draw_game_over();
+                // ...
             break;
         }
-
         this.gui.draw_pointer();
-
-
     },
-
 
 
     /*
@@ -702,30 +477,6 @@ var game = {
 
 
 /*
-*
-*   init game/render loop
-*
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-
+*   init game and loop
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 game.init();
-
-var time,
-    fps = 0,
-    last_update = (new Date)*1 - 1,
-    fps_filter = 30;
-
-(function game_loop() {
-    requestAnimFrame(game_loop);
-
-    var now = new Date().getTime(),
-        delta_time = now - (time || now);
-    time = now;
-
-    var temp_frame_fps = 1000 / ((now=new Date) - last_update);
-    fps += (temp_frame_fps - fps) / fps_filter;
-    last_update = now;
-
-    game.fps = fps.toFixed(1);
-    game.loop(delta_time);
-})();
