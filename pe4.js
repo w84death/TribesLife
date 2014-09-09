@@ -343,10 +343,10 @@ Input.prototype.init = function(){
     game_div.addEventListener('mouseup', this.disable_pointer, false);
     game_div.addEventListener('mousemove', this.track_pointer, false);
 
-    game_div.addEventListener('touchstart', enable_pointer, false);
-    game_div.addEventListener('touchend', disable_pointer, false);
-    game_div.addEventListener('touchcancel', disable_pointer, false);
-    game_div.addEventListener('touchmove', track_pointer, false);
+    game_div.addEventListener('touchstart', this.enable_pointer, false);
+    game_div.addEventListener('touchend', this.disable_pointer, false);
+    game_div.addEventListener('touchcancel', this.disable_pointer, false);
+    game_div.addEventListener('touchmove', this.track_pointer, false);
 
     game_div.addEventListener("contextmenu", function(e){
         e.preventDefault();
