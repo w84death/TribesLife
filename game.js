@@ -222,7 +222,10 @@ World.prototype.generate_sprites = function(){
 
 var game = {
 
-    gfx: new Gfx({min_w:512, min_h:384, max_w:1024, max_h:768}),
+    gfx: new Gfx({
+        tiles_wide:32,
+        tiles_high:16
+    }),
     gui: new Gui(),
     input: new Input(),
     moog: new Moog(),

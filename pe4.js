@@ -49,23 +49,8 @@ var Gfx = function(params){
     var game_div = document.getElementById('game'),
         real_width,real_height;
 
-    if(window.innerWidth < params.min_w){
-        real_width = params.min_w;
-    }else
-    if(window.innerWidth > params.max_w){
-        real_width = params.max_w;
-    }else{
-        real_width = window.innerWidth;
-    };
-
-    if(window.innerHeight < params.min_h){
-        real_height = params.min_h;
-    }else
-    if(window.innerHeight > params.max_h){
-        real_height = params.max_h;
-    }else{
-        real_height = window.innerHeight;
-    };
+    real_width = params.tiles_wide * this.screen.sprite_size * this.screen.scale;
+    real_height = params.tiles_high * this.screen.sprite_size * this.screen.scale;
 
     game_div.style.width = real_width + 'px';
     game_div.style.height = real_height + 'px';
@@ -357,6 +342,12 @@ Input.prototype.init = function(){
     game_div.addEventListener('mousedown', this.enable_pointer, false);
     game_div.addEventListener('mouseup', this.disable_pointer, false);
     game_div.addEventListener('mousemove', this.track_pointer, false);
+
+    game_div.addEventListener('touchstart', enable_pointer, false);
+    game_div.addEventListener('touchend', disable_pointer, false);
+    game_div.addEventListener('touchcancel', disable_pointer, false);
+    game_div.addEventListener('touchmove', track_pointer, false);
+
     game_div.addEventListener("contextmenu", function(e){
         e.preventDefault();
     }, false);
