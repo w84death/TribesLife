@@ -27,13 +27,12 @@ Gui.prototype.draw_intro = function(params){
 
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#000';
     ctx.font = "900 "+(4*game.gfx.screen.scale)+"px 'Source Code Pro', monospace,serif";
-    ctx.strokeStyle = '#fff';
 
     ctx.fillText('P1X PRESENTS',
         _w*0.5 << 0,
-        (_h*0.5 << 0) - 112
+        (_h*0.5 << 0 ) - 128
     );
 
     this.draw_image({
@@ -43,19 +42,15 @@ Gui.prototype.draw_intro = function(params){
         center: true
     });
 
-    ctx.beginPath();
-    ctx.moveTo(24,(_h*0.5 << 0)-12);
-    ctx.lineTo(_w-24,(_h*0.5 << 0)-12);
-    ctx.stroke();
 
     ctx.fillText('8X8 SPRITES; 16 COLOUR PALETTE',
         (_w*0.5 << 0),
-        (_h*0.5 << 0)+18
+        (_h*0.5 << 0)
     );
 
-    game.gfx.layers[this.layer].ctx.fillText('P1X ENGINE V4; HTTP://P1X.IN',
+    game.gfx.layers[this.layer].ctx.fillText('#js13kGames compo',
         (_w*0.5 << 0),
-        (_h*0.5 << 0)+32
+        (_h*0.5 << 0)+24
     );
 
     ctx.fillText('@W84DEATH',
@@ -63,15 +58,12 @@ Gui.prototype.draw_intro = function(params){
         (_h*0.5 << 0)+48
     );
 
-    ctx.beginPath();
-    ctx.moveTo(24,(_h*0.5 << 0)+ 56);
-    ctx.lineTo(_w-24,(_h*0.5 << 0)+ 56);
-    ctx.stroke();
 
     if(game.timer % 2 == 1){
+        ctx.fillStyle = '#fff';
         ctx.fillText('CLICK TO START',
             _w*0.5 << 0,
-            (_h*0.5 << 0) + 84
+            (_h*0.5 << 0)+128
         );
     }
 };
@@ -98,40 +90,56 @@ World.prototype.init = function(params){
         this.data[x] = [this.height]
         for (y = 0; y < this.height; y++) {
             this.data[x][y] = {
-                type: 0,
-                sprite: 0,
-                growing: 0
+                type: 0, // 0 - sea, 1 - land
+                sprite: 0, // see spritesheet
+                growing: 30, // growing factor (0-100)
+                grass: false,
+                tree: false,
+                target: false // targeted for tribe to move there
             };
         };
     };
 };
-World.prototype.generate_new_island = function(params){
-    var i,e, islands = [], x,y;
+World.prototype.init_island = function(){
+    var i,w,h,x,y,sx,sy,bp,
+        boilerplate = [
+        [0,0,1,1,1,1,0,0,1,1,0],
+        [1,1,1,1,2,1,1,0,0,1,0],
+        [1,1,1,2,3,2,1,1,0,0,0],
+        [0,1,2,3,2,2,2,1,0,0,0],
+        [1,1,2,2,3,2,1,1,0,1,0],
+        [1,1,1,2,2,1,1,1,0,0,0],
+        [0,0,1,1,1,1,0,0,1,1,1],
+        [1,0,0,0,0,0,0,1,1,2,1],
+        [0,0,0,1,1,0,0,0,1,1,1],
+        [0,0,0,1,1,0,0,0,0,0,0]];
 
-    x = 4 + (Math.random()*(this.width*0.5 - 4))<<0;
-    y = 4 + (Math.random()*(this.height*0.5 - 4))<<0;
-    this.data[x][y].type = 1;
+    // 0 - sea
+    // 1 - clear land
+    // 2 - grass
+    // 3 - tree
+    // 4 - house
 
-    x = this.width*0.5 + (Math.random()*(this.width*0.5 - 4))<<0;
-    y = 4 + (Math.random()*(this.height*0.5 - 4))<<0;
-    this.data[x][y].type = 1;
+    w = boilerplate[0].length;
+    h = boilerplate.length;
+    sx = ((this.width*0.5)<<0)-(w*0.5)<<0;
+    sy = ((this.height*0.5)<<0)-(h*0.5)<<0;
 
-    x = 4 + (Math.random()*(this.width*0.5 - 4))<<0;
-    y = this.height*0.5 + (Math.random()*(this.height*0.5 - 4))<<0;
-    this.data[x][y].type = 1;
-
-    x = this.width*0.5 + (Math.random()*(this.width*0.5 - 4))<<0;
-    y = this.height*0.5 + (Math.random()*(this.height*0.5 - 4))<<0;
-    this.data[x][y].type = 1;
-
-
-    for (x = 4; x < this.width-4; x++) {
-        for (y = 4; y < this.height-4; y++) {
-            if(this.data[x][y].type == 1 && Math.random() < params.expand){
-                this.data[x-1][y].type = 1;
-                this.data[x][y-1].type = 1;
-                this.data[x+1][y].type = 1;
-                this.data[x][y+1].type = 1;
+    for (x = 0; x < w; x++) {
+        for (y = 0; y < h; y++) {
+            bp = boilerplate[y][x];
+            if(bp == 0 || bp == 1){
+                this.data[x+sx][y+sy].type = boilerplate[y][x];
+            }
+            if(bp == 2){
+                this.data[x+sx][y+sy].type = 1;
+                this.data[x+sx][y+sy].grass = true;
+                this.data[x+sx][y+sy].sprite = Math.random()<0.5? 15 : 16;
+            }
+            if(bp == 3){
+                this.data[x+sx][y+sy].type = 1;
+                this.data[x+sx][y+sy].tree = true;
+                this.data[x+sx][y+sy].sprite = Math.random()<0.5? 21 : 22;
             }
         };
     };
@@ -157,26 +165,28 @@ World.prototype.generate_sprites = function(){
                 bin = this.binary_neigbours(x,y,1);
                 if(
                     bin == 60 || bin == 120 || bin == 56 || bin == 124 ||
-                    bin == 40 || bin == 108 || bin == 44 || bin == 104
+                    bin == 40 || bin == 108 || bin == 44 || bin == 104 ||
+                    bin == 121
                 ){
                     this.data[x][y].sprite = 6;
                 }else
                 if(
                     bin == 14 || bin == 15 || bin == 30 || bin == 31 ||
-                    bin == 10
+                    bin == 10 || bin == 95 || bin == 79 || bin == 78
                 ){
                     this.data[x][y].sprite = 8;
                 }else
                 if(
                     bin == 240 || bin == 241 || bin == 224 || bin == 225 ||
-                    bin == 160 || bin == 176 || bin == 177
-
+                    bin == 160 || bin == 176 || bin == 177 || bin == 245 ||
+                    bin == 228 || bin == 229 || bin == 161
                 ){
                     this.data[x][y].sprite = 7;
                 }else
                 if(
                     bin == 198 || bin == 199 || bin == 135 || bin == 195 ||
-                    bin == 131 || bin == 130 || bin == 134 || bin == 194
+                    bin == 131 || bin == 130 || bin == 134 || bin == 194 ||
+                    bin == 147 || bin == 151 || bin == 215
                 ){
                     this.data[x][y].sprite = 9;
                 }else
@@ -192,23 +202,33 @@ World.prototype.generate_sprites = function(){
                 }else
                 if(
                     bin == 28 || bin == 8 || bin == 24 || bin == 12 ||
-                    bin == 29
+                    bin == 29 || bin == 88
                 ){
-                    this.data[x][y].sprite = 14;
+                    this.data[x][y].sprite = 10;
                 }else
                 if(
                     bin == 128 || bin == 129 || bin == 192 || bin == 193 ||
                     bin == 209
                 ){
-                    this.data[x][y].sprite = 15;
+                    this.data[x][y].sprite = 11;
                 }else
                 if(
-                    bin == 143 || bin == 207 || bin == 159 || bin == 223
+                    bin == 143 || bin == 207 || bin == 159 || bin == 223 ||
+                    bin == 158
                 ){
                     this.data[x][y].sprite = (x%2==0)? 4 : 5;
+                }else
+                if(
+                    bin == 0 || bin == 64 || bin == 1 || bin == 5 ||
+                    bin == 21 || bin == 85 || bin == 16 || bin == 4 ||
+                    bin == 20 || bin == 68
+                ){
+                   this.data[x][y].sprite = 14;
                 }else{
                     if(this.data[x][y].sprite != 2 && this.data[x][y].sprite != 3){
-                        this.data[x][y].sprite = Math.random()>0.5? 2 : 3;
+                        if(this.data[x][y].sprite < 15){
+                            this.data[x][y].sprite = Math.random()>0.5? 2 : 3;
+                        }
                     }
                 }
             }
@@ -225,8 +245,8 @@ World.prototype.generate_sprites = function(){
 var game = {
 
     gfx: new Gfx({
-        tiles_wide:32,
-        tiles_high:16
+        tiles_wide:40,
+        tiles_high:22
     }),
     gui: new Gui(),
     input: new Input(),
@@ -242,7 +262,7 @@ var game = {
         debug_world: false,
         game_clock: 500,
         conversation_time: 30,
-        water_animations: 36
+        water_animations: 18
     },
 
     /*
@@ -297,20 +317,17 @@ var game = {
     },
 
     new_game: function(){
-        /*
-        this.world.generate_new_island({
-            trees: 0.5,
-            islands: 4,
-            expand: 0.8,
-        });
+
+        this.world.init_island();
         this.world.generate_sprites();
-        */
     },
 
     user_select_on_screen: function(){
         var px = (this.input.pointer.pos.x / this.gfx.screen.scale / this.gfx.screen.sprite_size )<<0,
             py = (this.input.pointer.pos.y / this.gfx.screen.scale / this.gfx.screen.sprite_size ) <<0;
+
         if(
+            this.state == 'game' &&
             px > 0 && py > 0 &&
             px < this.world.width-1 && py < this.world.height-1
         ){
@@ -323,7 +340,7 @@ var game = {
     user_draw_on_screen: function(){
         var px,py;
 
-        if(this.input.pointer.enable){
+        if(this.input.pointer.enable && this.state == 'game'){
             px = (this.input.pointer.pos.x / this.gfx.screen.scale / this.gfx.screen.sprite_size )<<0;
             py = (this.input.pointer.pos.y / this.gfx.screen.scale / this.gfx.screen.sprite_size ) <<0;
             if(
@@ -357,6 +374,25 @@ var game = {
                 if(this.gfx.load()){
                     this.gfx.layers[0].render = true;
                     this.state = 'intro';
+
+                    this.gui.draw_box({
+                        layer: 0,
+                        width: 14,
+                        height: 9,
+                        x: ((this.world.width*0.5)<<0)-7,
+                        y: ((this.world.height*0.5)<<0)-6,
+                        sprites: [
+                            18,19,20,
+                            24,25,26,
+                            30,31,32
+                        ]
+                    });
+                    this.gfx.put_tile({
+                        layer:0,
+                        id:28,
+                        x:((this.world.width*0.5)<<0)+6,
+                        y:((this.world.height*0.5)<<0)+3
+                    });
                 }
             break;
             case 'intro':
@@ -384,24 +420,12 @@ var game = {
 
      render: function(delta_time){
         this.gui.clear();
-        var i,x,y;
+        var i,x,y, sprite;
 
         switch(this.state){
             case 'loading':
             break;
             case 'intro':
-                if(this.gfx.layers[0].render){
-                    for (x = 0; x < this.world.width; x++) {
-                        for (y = 0; y < this.world.height; y++) {
-                            this.gfx.put_tile({
-                                layer:0,
-                                id:29,
-                                x:x,y:y
-                            });
-                        };
-                    };
-                    this.gfx.layers[0].render = false;
-                }
                 this.gui.draw_intro();
             break;
             case 'game':

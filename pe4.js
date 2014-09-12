@@ -252,7 +252,6 @@ Gui.prototype.draw_loading = function(params){
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
     ctx.font = "900 "+(4*game.gfx.screen.scale)+"px 'Source Code Pro', monospace,serif";
-    ctx.strokeStyle = '#fff';
 
     ctx.fillText('LOADING GAME..',
         _w*0.5 << 0,
@@ -264,6 +263,7 @@ Gui.prototype.draw_fps = function(){
     ctx.font = "900 "+(5* game.gfx.screen.scale)+"px 'Source Code Pro', monospace,serif";
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
     ctx.fillText('FPS '+game.fps,
         (game.world.width  - 2) * game.gfx.screen.scale * game.gfx.screen.sprite_size,
         (game.world.height  -1 ) * game.gfx.screen.scale * game.gfx.screen.sprite_size
@@ -434,9 +434,9 @@ Messages.prototype.draw_message = function(params){
         x: corner.x,
         y: corner.y,
         sprites: [
-            25,26,27,
-            26,26,28,
-            29,30,31
+            18,19,20,
+            24,25,26,
+            30,31,32
         ]
     });
 
