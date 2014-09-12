@@ -207,7 +207,9 @@ World.prototype.generate_sprites = function(){
                 ){
                     this.data[x][y].sprite = (x%2==0)? 4 : 5;
                 }else{
-                    this.data[x][y].sprite = 2;
+                    if(this.data[x][y].sprite != 2 && this.data[x][y].sprite != 3){
+                        this.data[x][y].sprite = Math.random()>0.5? 2 : 3;
+                    }
                 }
             }
         };
