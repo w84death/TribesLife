@@ -149,8 +149,8 @@ World.prototype.init_island = function(){
             life: true,
             speed: 0.2 + (Math.random()*0.5),
             animations: {
-                'idle' : [39,40],
-                'move' : [36,37,38,37]
+                'idle' : [42,44],
+                'move' : [36,38,40,38]
             },
             x: sx+2,
             y: sy+2
@@ -162,8 +162,8 @@ World.prototype.init_island = function(){
             life: true,
             speed: 0.2 + (Math.random()*0.5),
             animations: {
-                'idle' : [39,40],
-                'move' : [36,37,38,37]
+                'idle' : [42,44],
+                'move' : [36,38,40,38]
             },
             x: sx+4,
             y: sy+2
@@ -175,8 +175,8 @@ World.prototype.init_island = function(){
             life: true,
             speed: 0.2 + (Math.random()*0.5),
             animations: {
-                'idle' : [39,40],
-                'move' : [36,37,38,37]
+                'idle' : [42,44],
+                'move' : [36,38,40,38]
             },
             x: sx+3,
             y: sy+1
@@ -627,10 +627,9 @@ var game = {
                             e.move(delta);
                             this.gfx.put_tile({
                                 layer:2,
-                                id:e.animations[e.active_animation][e.frame],
+                                id:e.animations[e.active_animation][e.frame] + (e.flip? 1 : 0),
                                 x:e.render_pos.x,
                                 y:e.render_pos.y,
-                                flip: e.flip,
                                 pixel_perfect: true
                             });
                         }
