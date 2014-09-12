@@ -75,10 +75,10 @@ Gui.prototype.draw_intro = function(params){
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 var World = function(){
-    width = 0;
-    height = 0;
-    data = [];
-    entities = [];
+    this.width = 0;
+    this.height = 0;
+    this.data = [];
+    this.entities = [];
 };
 World.prototype.init = function(params){
     var x,y;
@@ -143,6 +143,45 @@ World.prototype.init_island = function(){
             }
         };
     };
+
+    this.entities.push(
+        new Entity({
+            life: true,
+            speed: 0.2 + (Math.random()*0.5),
+            animations: {
+                'idle' : [39,40],
+                'move' : [36,37,38,37]
+            },
+            x: sx+2,
+            y: sy+2
+        })
+    );
+
+    this.entities.push(
+        new Entity({
+            life: true,
+            speed: 0.2 + (Math.random()*0.5),
+            animations: {
+                'idle' : [39,40],
+                'move' : [36,37,38,37]
+            },
+            x: sx+4,
+            y: sy+2
+        })
+    );
+
+    this.entities.push(
+        new Entity({
+            life: true,
+            speed: 0.2 + (Math.random()*0.5),
+            animations: {
+                'idle' : [39,40],
+                'move' : [36,37,38,37]
+            },
+            x: sx+3,
+            y: sy+1
+        })
+    );
 };
 World.prototype.binary_neigbours = function(x,y,t){
     var bn = 0;
@@ -235,12 +274,93 @@ World.prototype.generate_sprites = function(){
         };
     };
 };
+
+
+
+/*
+*
+*   entities AI
+*
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+
+Entity.prototype.ai = function(delta){
+    var empty = [], random,
+        bestRoute = 0,
+        friends = 0,
+        sx = this.pos.x*game.gfx.screen.sprite_size*game.gfx.screen.scale,
+        sy = this.pos.y*game.gfx.screen.sprite_size*game.gfx.screen.scale;
+
+    if(Math.random() < this.speed){
+        for (var x = this.pos.x-1; x <= this.pos.x+1; x++) {
+            for (var y = this.pos.y-1; y <= this.pos.y+1; y++) {
+                if(game.world.data[x] && game.world.data[x][y] &&
+                    game.world.data[x][y].type == 1){
+                    if(!game.find_entity_at_pos({x:x,y:y})){
+                        empty.push({x:x,y:y});
+                    }else{
+                        friends++;
+                    }
+                }
+            }
+        }
+
+        if(empty.length>0){
+
+            if(friends >= 5){
+                this.energy = ((this.energy*0.5)<<0)-1;
+            }
+
+            if(sx !== this.render_pos.x || sy !== this.render_pos.y){
+
+            }else{
+                random = (Math.random()*empty.length)<<0;
+                this.pos.x = empty[random].x;
+                this.pos.y = empty[random].y;
+            }
+        }
+    }
+};
+
+Entity.prototype.move = function(delta){
+    var sx = this.pos.x*game.gfx.screen.sprite_size*game.gfx.screen.scale,
+        sy = this.pos.y*game.gfx.screen.sprite_size*game.gfx.screen.scale,
+        speed = (delta*this.speed)<<0;
+
+    if(sx !== this.render_pos.x || sy !== this.render_pos.y){
+
+        this.change_animation_to('move');
+
+        if(this.render_pos.x < sx){
+            this.render_pos.x += speed;
+            this.flip = false;
+        }
+        if(this.render_pos.x > sx){
+            this.render_pos.x -= speed;
+            this.flip = true;
+        }
+        if(this.render_pos.y < sy){
+            this.render_pos.y += speed;
+        }
+        if(this.render_pos.y > sy){
+            this.render_pos.y -= speed;
+        }
+
+        if(Math.abs(this.render_pos.x-sx) < game.gfx.screen.sprite_size){
+            this.render_pos.x = sx;
+        }
+        if(Math.abs(this.render_pos.y-sy) < game.gfx.screen.sprite_size){
+            this.render_pos.y = sy;
+        }
+    }else{
+        this.change_animation_to('idle');
+    }
+}
 /*
 *
 *   main game mechanics
 *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 
 var game = {
 
@@ -314,10 +434,10 @@ var game = {
 
     inc_timer: function(){
         game.timer++;
+        game.entitiesAI();
     },
 
     new_game: function(){
-
         this.world.init_island();
         this.world.generate_sprites();
     },
@@ -352,6 +472,27 @@ var game = {
                 this.gfx.layers[1].render = true;
             }
         }
+    },
+
+    entitiesAI: function(){
+        var entity, e;
+        for (entity in this.world.entities) {
+            e = this.world.entities[entity];
+            if(e.life){
+                e.ai();
+            }
+        };
+    },
+
+    find_entity_at_pos: function(params){
+        var entity, e;
+        for (entity in game.world.entities) {
+            e = game.world.entities[entity];
+            if(e.life && e.pos.x === params.x && e.pos.y === params.y){
+                return true;
+            }
+        };
+        return false;
     },
 
     debug_binary_neighbors: function(x,y){
@@ -405,7 +546,12 @@ var game = {
             break;
             case 'game':
 
-                // ?
+                for (entity in this.world.entities) {
+                    e = this.world.entities[entity];
+                    if(e.life){
+                        e.animate();
+                    }
+                };
 
             break;
             case 'game_over':
@@ -418,9 +564,9 @@ var game = {
 
     },
 
-     render: function(delta_time){
+     render: function(delta){
         this.gui.clear();
-        var i,x,y, sprite;
+        var i,x,y,e,entity,sprite;
 
         switch(this.state){
             case 'loading':
@@ -474,7 +620,22 @@ var game = {
 
                 // ENTITIES
                 if(this.gfx.layers[2].render){
-                    // ...
+                    this.gfx.clear(2);
+                    for (entity in this.world.entities) {
+                        e = this.world.entities[entity];
+                        if(e.life){
+                            e.move(delta);
+                            this.gfx.put_tile({
+                                layer:2,
+                                id:e.animations[e.active_animation][e.frame],
+                                x:e.render_pos.x,
+                                y:e.render_pos.y,
+                                flip: e.flip,
+                                pixel_perfect: true
+                            });
+                        }
+                    };
+
                     this.gfx.layers[2].render = false;
                 }
 

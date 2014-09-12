@@ -122,7 +122,7 @@ Gfx.prototype.draw_tileset = function(){
     };
 };
 Gfx.prototype.put_tile = function(params){
-    var sx,sy,
+    var sx,sy,x,y,
     _w = this.sprites.tileset.width / this.screen.sprite_size,
     _h = this.sprites.tileset.height / this.screen.sprite_size;
 
@@ -134,17 +134,26 @@ Gfx.prototype.put_tile = function(params){
         sy = 0;
     }
 
+    if(params.pixel_perfect){
+        x = params.x;
+        y = params.y;
+    }else{
+        x = params.x*this.screen.sprite_size*this.screen.scale;
+        y = params.y*this.screen.sprite_size*this.screen.scale;
+    }
+
     this.layers[params.layer].ctx.drawImage(
         this.sprites.tileset,
         sx*this.screen.sprite_size,
         sy*this.screen.sprite_size,
         this.screen.sprite_size,
         this.screen.sprite_size,
-        params.x*this.screen.sprite_size*this.screen.scale,
-        params.y*this.screen.sprite_size*this.screen.scale,
+        x,
+        y,
         this.screen.sprite_size*this.screen.scale,
         this.screen.sprite_size*this.screen.scale
     );
+
 };
 
 /*
@@ -559,11 +568,14 @@ function game_loop() {
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 var Entity = function(params){
-    this.live = params.live;
-    this.sprites = params.sprites;
+    this.life = params.life;
+    this.energy = 100;
+    this.animations = params.animations;
+    this.active_animation = 'idle';
     this.fps_limit = 6;
-    this.frame = 0;
+    this.frame = (Math.random()*(params.animations[this.active_animation].length-1))<<0;
     this.frame_counter = 0;
+    this.flip = false;
     this.pos = {
         x: params.x,
         y: params.y
@@ -572,7 +584,11 @@ var Entity = function(params){
         x: params.x,
         y: params.y
     };
-    this.last_move = game.timer;
+    this.render_pos = {
+        x: params.x*game.gfx.screen.sprite_size*game.gfx.screen.scale,
+        y: params.y*game.gfx.screen.sprite_size*game.gfx.screen.scale
+    };
+    this.speed = params.speed;
 };
 Entity.prototype.distance_to = function(params){
     var xs = 0;
@@ -586,13 +602,17 @@ Entity.prototype.distance_to = function(params){
 
     return Math.sqrt( xs + ys )<<0;
 };
+Entity.prototype.change_animation_to = function(animation){
+    this.active_animation = animation;
+    this.frame = (Math.random()*(this.animations[this.active_animation].length))<<0;
+};
 Entity.prototype.animate = function(){
     if(this.life && this.frame_counter++ > this.fps_limit){
         this.frame++;
-        if(this.frame >= this.sprites.length){
+        if(this.frame >= this.animations[this.active_animation].length){
             this.frame = 0;
         }
         this.frame_counter = 0;
-        game.gfx.layers[1].render = true;
+        game.gfx.layers[2].render = true;
     }
 };
