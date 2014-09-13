@@ -584,7 +584,9 @@ function game_loop() {
 
 var Entity = function(params){
     this.life = params.life;
+    this.type = params.type;
     this.energy = 100;
+    this.age = 0;
     this.animations = params.animations;
     this.active_animation = 'idle';
     this.fps_limit = params.fps_limit;
