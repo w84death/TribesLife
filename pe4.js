@@ -106,11 +106,27 @@ Gfx.prototype.load = function(){
     }
     return false;
 };
-Gfx.prototype.clear = function(layer){
+Gfx.prototype.clear_layer = function(layer){
     this.layers[layer].ctx.clearRect(
         0, 0,
         this.screen.width*this.screen.scale,
         this.screen.height*this.screen.scale
+    );
+};
+Gfx.prototype.clear_region = function(params){
+    this.layers[params.layer].ctx.clearRect(
+        (params.x-params.size*0.5)*this.screen.scale*this.screen.sprite_size,
+        (params.y-params.size*0.5)*this.screen.scale*this.screen.sprite_size,
+        params.size*2*this.screen.scale*this.screen.sprite_size,
+        params.size*2*this.screen.scale*this.screen.sprite_size
+    );
+};
+Gfx.prototype.clear_sprite = function(params){
+    this.layers[params.layer].ctx.clearRect(
+        params.x,
+        params.y,
+        this.screen.scale*this.screen.sprite_size,
+        this.screen.scale*this.screen.sprite_size
     );
 };
 Gfx.prototype.draw_tileset = function(){
@@ -556,8 +572,7 @@ function game_loop() {
     fps += (temp_frame_fps - fps) / fps_filter;
     last_update = now;
 
-    game.fps = fps.toFixed(1);
-    game.loop(delta_time);
+    game.loop(delta_time, fps.toFixed(1));
 };
 
 
@@ -572,7 +587,7 @@ var Entity = function(params){
     this.energy = 100;
     this.animations = params.animations;
     this.active_animation = 'idle';
-    this.fps_limit = 6;
+    this.fps_limit = params.fps_limit;
     this.frame = (Math.random()*(params.animations[this.active_animation].length-1))<<0;
     this.frame_counter = 0;
     this.flip = false;
@@ -603,16 +618,17 @@ Entity.prototype.distance_to = function(params){
     return Math.sqrt( xs + ys )<<0;
 };
 Entity.prototype.change_animation_to = function(animation){
-    this.active_animation = animation;
-    this.frame = (Math.random()*(this.animations[this.active_animation].length))<<0;
+    if(this.active_animation !== animation){
+        this.active_animation = animation;
+        this.frame = (Math.random()*(this.animations[this.active_animation].length))<<0;
+    }
 };
 Entity.prototype.animate = function(){
-    if(this.life && this.frame_counter++ > this.fps_limit){
+    if(this.life && this.frame_counter++ > this.fps_limit + (game.delta*this.speed)){
         this.frame++;
         if(this.frame >= this.animations[this.active_animation].length){
             this.frame = 0;
         }
         this.frame_counter = 0;
-        game.gfx.layers[2].render = true;
     }
 };

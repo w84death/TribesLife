@@ -92,7 +92,8 @@ World.prototype.init = function(params){
             this.data[x][y] = {
                 type: 0, // 0 - sea, 1 - land
                 sprite: 0, // see spritesheet
-                growing: 30, // growing factor (0-100)
+                growing: 1 + (Math.random()*10)<<0, // growing factor (0-100)
+                clear: true,
                 grass: false,
                 tree: false,
                 target: false // targeted for tribe to move there
@@ -134,54 +135,44 @@ World.prototype.init_island = function(){
             if(bp == 2){
                 this.data[x+sx][y+sy].type = 1;
                 this.data[x+sx][y+sy].grass = true;
+                this.data[x+sx][y+sy].clear = false;
                 this.data[x+sx][y+sy].sprite = Math.random()<0.5? 15 : 16;
             }
             if(bp == 3){
                 this.data[x+sx][y+sy].type = 1;
                 this.data[x+sx][y+sy].tree = true;
+                this.data[x+sx][y+sy].clear = false;
                 this.data[x+sx][y+sy].sprite = Math.random()<0.5? 21 : 22;
             }
         };
     };
 
-    this.entities.push(
-        new Entity({
-            life: true,
-            speed: 0.2 + (Math.random()*0.5),
-            animations: {
-                'idle' : [42,44],
-                'move' : [36,38,40,38]
-            },
-            x: sx+2,
-            y: sy+2
-        })
-    );
+    game.spawn_entity({
+        type: 'tribe',
+        x:sx+4,
+        y:sy+2
+    });
 
-    this.entities.push(
-        new Entity({
-            life: true,
-            speed: 0.2 + (Math.random()*0.5),
-            animations: {
-                'idle' : [42,44],
-                'move' : [36,38,40,38]
-            },
-            x: sx+4,
-            y: sy+2
-        })
-    );
+    game.spawn_entity({
+        type: 'tribe',
+        x:sx+3,
+        y:sy+1
+    });
 
-    this.entities.push(
-        new Entity({
-            life: true,
-            speed: 0.2 + (Math.random()*0.5),
-            animations: {
-                'idle' : [42,44],
-                'move' : [36,38,40,38]
-            },
-            x: sx+3,
-            y: sy+1
-        })
-    );
+    game.spawn_entity({
+        type: 'tribe',
+        x:sx+5,
+        y:sy+2
+    });
+
+    for (var i = 0; i < 3; i++) {
+        game.spawn_entity({
+            type: 'rabbit',
+            x:sx+3,
+            y:sy+5
+        });
+    };
+
 };
 World.prototype.binary_neigbours = function(x,y,t){
     var bn = 0;
@@ -274,8 +265,59 @@ World.prototype.generate_sprites = function(){
         };
     };
 };
+World.prototype.grow_plants = function(){
+    var empty = [], random,gx,gy,sx,sy;
 
-
+    for (x = 1; x < this.width-1; x++) {
+        for (y = 1; y < this.height-1; y++) {
+            if(this.data[x][y].type == 1){
+                if(Math.random()*1000 < this.data[x][y].growing){
+                    empty = []
+                    for (gx = x-1; gx <= x+1; gx++) {
+                        for (gy = y-1; gy <= y+1; gy++) {
+                            if(
+                                (this.data[x][y].grass && game.world.data[gx][gy].clear) ||
+                                (this.data[x][y].tree && ( game.world.data[gx][gy].clear || game.world.data[gx][gy].grass))
+                            ){
+                                if(this.binary_neigbours(gx,gy,1)==255){
+                                    empty.push({x:gx,y:gy});
+                                }
+                            }
+                        }
+                    }
+                    if(empty.length>0){
+                        random = (Math.random()*empty.length)<<0;
+                        sx = empty[random].x;
+                        sy = empty[random].y;
+                        if(this.data[x][y].grass){
+                            this.data[sx][sy].grass = true;
+                            this.data[sx][sy].clear = false;
+                            this.data[sx][sy].sprite = Math.random()<0.5? 15 : 16;
+                            game.gfx.put_tile({
+                                layer:1,
+                                id:this.data[sx][sy].sprite,
+                                x:sx,
+                                y:sy
+                            });
+                        }
+                        if(this.data[x][y].tree){
+                            this.data[sx][sy].tree = true;
+                            this.data[sx][sy].grass = false;
+                            this.data[sx][sy].clear = false;
+                            this.data[sx][sy].sprite = Math.random()<0.5? 21 : 22;
+                            game.gfx.put_tile({
+                                layer:1,
+                                id:this.data[sx][sy].sprite,
+                                x:sx,
+                                y:sy
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+};
 
 /*
 *
@@ -284,14 +326,13 @@ World.prototype.generate_sprites = function(){
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-Entity.prototype.ai = function(delta){
+Entity.prototype.ai = function(){
     var empty = [], random,
-        bestRoute = 0,
         friends = 0,
         sx = this.pos.x*game.gfx.screen.sprite_size*game.gfx.screen.scale,
         sy = this.pos.y*game.gfx.screen.sprite_size*game.gfx.screen.scale;
 
-    if(Math.random() < this.speed){
+    if(Math.random() <= this.speed){
         for (var x = this.pos.x-1; x <= this.pos.x+1; x++) {
             for (var y = this.pos.y-1; y <= this.pos.y+1; y++) {
                 if(game.world.data[x] && game.world.data[x][y] &&
@@ -311,21 +352,47 @@ Entity.prototype.ai = function(delta){
                 this.energy = ((this.energy*0.5)<<0)-1;
             }
 
-            if(sx !== this.render_pos.x || sy !== this.render_pos.y){
+            if(this.rabbit && friends > 1 &&
+                empty.length>2 && this.energy >= 10 && (Math.random() < game.settings.rabbits_reproduction)){
+                var random = (Math.random()*empty.length)<<0;
+                game.spawn_entity({
+                    type: 'rabbit',
+                    x:empty[random].x,
+                    y:empty[random].y
+                });
+            }
 
-            }else{
+            if(sx === this.render_pos.x && sy === this.render_pos.y){
                 random = (Math.random()*empty.length)<<0;
                 this.pos.x = empty[random].x;
                 this.pos.y = empty[random].y;
             }
         }
+    }else{
+        if(sx === this.render_pos.x && sy === this.render_pos.y){
+            if(game.world.data[this.pos.x][this.pos.y].grass && this.energy < this.energy*0.5){
+                game.world.data[this.pos.x][this.pos.y].grass = false
+                game.world.data[this.pos.x][this.pos.y].clear = true;
+                game.world.data[this.pos.x][this.pos.y].sprite = Math.random()<0.5? 2 : 3;
+                game.gfx.put_tile({
+                    layer:1,
+                    id:game.world.data[this.pos.x][this.pos.y].sprite,
+                    x:this.pos.x,
+                    y:this.pos.y
+                });
+                this.energy += 30;
+                if(this.energy > 100){
+                    this.energy = 100;
+                }
+            }
+        }
     }
 };
 
-Entity.prototype.move = function(delta){
+Entity.prototype.move = function(){
     var sx = this.pos.x*game.gfx.screen.sprite_size*game.gfx.screen.scale,
         sy = this.pos.y*game.gfx.screen.sprite_size*game.gfx.screen.scale,
-        speed = (delta*this.speed)<<0;
+        speed = (game.delta*this.speed)<<0;
 
     if(sx !== this.render_pos.x || sy !== this.render_pos.y){
 
@@ -355,6 +422,8 @@ Entity.prototype.move = function(delta){
     }else{
         this.change_animation_to('idle');
     }
+
+    this.energy -= 1;
 }
 /*
 *
@@ -377,12 +446,14 @@ var game = {
     fps: 0,
     state: 'loading',
     timer: 0,
+    pause: false,
 
     settings:{
         debug_world: false,
-        game_clock: 500,
+        game_clock: 100,
         conversation_time: 30,
-        water_animations: 18
+        water_animations: 18,
+        rabbits_reproduction: 0.6
     },
 
     /*
@@ -392,6 +463,8 @@ var game = {
     init: function(){
         // init game timer
         window.setInterval(game.inc_timer,game.settings.game_clock);
+        window.onblur = function(){game.pause=true;};
+        window.onfocus = function(){game.pause=false;};
 
         // graphics init
         this.gfx.init({
@@ -433,8 +506,11 @@ var game = {
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
     inc_timer: function(){
-        game.timer++;
-        game.entitiesAI();
+        if(!game.pause){
+            game.timer++;
+            game.entitiesAI();
+            game.world.grow_plants();
+        }
     },
 
     new_game: function(){
@@ -449,7 +525,8 @@ var game = {
         if(
             this.state == 'game' &&
             px > 0 && py > 0 &&
-            px < this.world.width-1 && py < this.world.height-1
+            px < this.world.width-1 && py < this.world.height-1 &&
+            this.world.data[px][py].type == 0
         ){
             this.world.data[px][py].type = 1;
             this.world.generate_sprites();
@@ -465,7 +542,8 @@ var game = {
             py = (this.input.pointer.pos.y / this.gfx.screen.scale / this.gfx.screen.sprite_size ) <<0;
             if(
                 px > 0 && py > 0 &&
-                px < this.world.width-1 && py < this.world.height-1
+                px < this.world.width-1 && py < this.world.height-1 &&
+                this.world.data[px][py].type == 0
             ){
                 this.world.data[px][py].type = 1;
                 this.world.generate_sprites();
@@ -495,6 +573,42 @@ var game = {
         return false;
     },
 
+    spawn_entity: function(params){
+        if(params.type == 'rabbit'){
+            this.world.entities.push(
+                new Entity({
+                    rabbit: true,
+                    life: true,
+                    speed: 0.1 + (Math.random()*0.1),
+                    animations: {
+                        'idle' : [46,46,46,46,46,47],
+                        'move' : [48,50]
+                    },
+                    fps_limit: 2,
+                    x: params.x,
+                    y: params.y
+                })
+            );
+        }
+
+        if(params.type == 'tribe'){
+            this.world.entities.push(
+                new Entity({
+                    tribe: true,
+                    life: true,
+                    speed: 0.05 + (Math.random()*0.05),
+                    animations: {
+                        'idle' : [42,42,42,42,42,42,44],
+                        'move' : [36,38,40,38]
+                    },
+                    fps_limit: 4,
+                    x: params.x,
+                    y: params.y
+                })
+            );
+        }
+    },
+
     debug_binary_neighbors: function(x,y){
         var ctx = game.gfx.layers[2].ctx,
         xs = x*game.gfx.screen.scale*game.gfx.screen.sprite_size + (game.gfx.screen.sprite_size*0.5)*game.gfx.screen.scale,
@@ -508,14 +622,11 @@ var game = {
         );
     },
 
-    update: function(delta_time){
+    update: function(){
 
         switch(this.state){
             case 'loading':
                 if(this.gfx.load()){
-                    this.gfx.layers[0].render = true;
-                    this.state = 'intro';
-
                     this.gui.draw_box({
                         layer: 0,
                         width: 14,
@@ -530,10 +641,13 @@ var game = {
                     });
                     this.gfx.put_tile({
                         layer:0,
-                        id:28,
+                        id:46,
                         x:((this.world.width*0.5)<<0)+6,
                         y:((this.world.height*0.5)<<0)+3
                     });
+
+                    this.gfx.layers[0].render = true;
+                    this.state = 'intro';
                 }
             break;
             case 'intro':
@@ -545,14 +659,14 @@ var game = {
                 }
             break;
             case 'game':
-
-                for (entity in this.world.entities) {
-                    e = this.world.entities[entity];
-                    if(e.life){
-                        e.animate();
-                    }
-                };
-
+                if(!game.pause){
+                    for (entity in this.world.entities) {
+                        e = this.world.entities[entity];
+                        if(e.life){
+                            e.animate();
+                        }
+                    };
+                }
             break;
             case 'game_over':
                 if(this.input.pointer.enable){
@@ -564,7 +678,7 @@ var game = {
 
     },
 
-     render: function(delta){
+     render: function(){
         this.gui.clear();
         var i,x,y,e,entity,sprite;
 
@@ -601,8 +715,8 @@ var game = {
 
                 // ISLANDS
                 if(this.gfx.layers[1].render){
-                    this.gfx.clear(1);
-                    if(this.settings.debug_world) this.gfx.clear(2);
+                    this.gfx.clear_layer(1);
+                    if(this.settings.debug_world) this.gfx.clear_layer(2);
                     for (x = 0; x < this.world.width; x++) {
                         for (y = 0; y < this.world.height; y++) {
                             if(this.world.data[x][y].type > 0){
@@ -619,24 +733,26 @@ var game = {
                 }
 
                 // ENTITIES
-                if(this.gfx.layers[2].render){
-                    this.gfx.clear(2);
-                    for (entity in this.world.entities) {
-                        e = this.world.entities[entity];
-                        if(e.life){
-                            e.move(delta);
-                            this.gfx.put_tile({
-                                layer:2,
-                                id:e.animations[e.active_animation][e.frame] + (e.flip? 1 : 0),
-                                x:e.render_pos.x,
-                                y:e.render_pos.y,
-                                pixel_perfect: true
-                            });
-                        }
-                    };
 
-                    this.gfx.layers[2].render = false;
-                }
+                for (entity in this.world.entities) {
+                    e = this.world.entities[entity];
+                    if(e.life){
+                        this.gfx.clear_sprite({
+                            layer:2,
+                            x:e.render_pos.x,
+                            y:e.render_pos.y
+                        });
+                        e.move();
+                        this.gfx.put_tile({
+                            layer:2,
+                            id:e.animations[e.active_animation][e.frame] + (e.flip? 1 : 0),
+                            x:e.render_pos.x,
+                            y:e.render_pos.y,
+                            pixel_perfect: true
+                        });
+                    }
+                };
+
 
                 this.gui.draw_fps();
                 this.gui.draw_image({
@@ -657,9 +773,11 @@ var game = {
     *   main loop
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-    loop: function(delta_time){
-        this.update(delta_time);
-        this.render(delta_time);
+    loop: function(delta, fps){
+        this.fps = fps;
+        this.delta = delta;
+        this.update();
+        this.render();
     },
 
 };
